@@ -25,12 +25,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.flow.first
@@ -50,8 +52,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.AnimatedPane
@@ -65,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,13 +75,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -275,142 +279,199 @@ public fun PreferencePageScreen(
     val currentPage = selectedPageId?.let { id -> pages.firstOrNull { it.id == id } }
     val showBack =
         !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail && currentPage != null
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
+    // The big page title + search pill are the first item of the list pane's column, so
+    // they scroll away with the content. While that is happening, a compact bar (clipped
+    // to a fraction of its height) grows in under it; the same trick applies to the
+    // detail pane, whose bar carries the back arrow in single-pane mode. Each bar's
+    // height is a pure function of its list's scroll offset, so it can never desync
+    // from the content. The offsets are observed via snapshotFlow because reading them
+    // directly in composition does not reliably schedule a recomposition.
+    //
+    // The list pane's collapse is a single continuous transformation driven by p
+    // (1 = list at top, 0 = fully collapsed, over 152dp of scroll):
+    // - the title is drawn in the OVERLAY (not the list), so it moves at the panel's
+    //   speed: its bottom edge goes from 96dp (top, 24sp) to 44dp (collapsed, 22sp) —
+    //   i.e. it grows and moves down as the list approaches the top, and ends exactly
+    //   on the compact bar's title position, so there is no visible handoff;
+    // - the first list item is a fixed 152dp opaque panel carrying the search pill at
+    //   its bottom (104..152dp); its bottom edge (152 - d) IS the extending panel: it
+    //   covers the 56dp bar behind the list while at the top, and the bar is fully
+    //   uncovered exactly when the panel (and the pill) has scrolled away.
+    val listState = remember { LazyListState() }
+    val detailState = rememberLazyListState()
+    val listHeaderHeight = with(LocalDensity.current) { 152.dp.toPx() }
+    val barHeightPx = with(LocalDensity.current) { 56.dp.toPx() }
+    fun headerProgress(state: LazyListState, distancePx: Float): Float =
+        if (state.firstVisibleItemIndex == 0) {
+            (state.firstVisibleItemScrollOffset / distancePx).coerceIn(0f, 1f)
+        } else {
+            1f
+        }
+    var listHeaderProgress by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(listState) {
+        snapshotFlow { headerProgress(listState, listHeaderHeight) }
+            .collect { listHeaderProgress = it }
+    }
+    var detailHeaderProgressRaw by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(detailState) {
+        snapshotFlow { headerProgress(detailState, barHeightPx) }
+            .collect { detailHeaderProgressRaw = it }
+    }
+    // In single-pane the detail page has no big header of its own, and the back arrow
+    // lives in the bar — so the bar is always shown there; in two-pane it grows in as
+    // the page scrolls.
+    val detailHeaderProgress = if (showBack) 1f else detailHeaderProgressRaw
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Column(Modifier.fillMaxSize()) {
-            TopAppBar(
-                title = { Text(text = currentPage?.title ?: title) },
-                navigationIcon = {
-                    if (showBack) {
-                        IconButton(onClick = ::backAction) {
-                            Icon(
-                                imageVector = Icons.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
-                        }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
             ListDetailPaneScaffold(
                 directive = navigator.scaffoldDirective,
                 scaffoldState = navigator.scaffoldState,
                 listPane = {
                     AnimatedPane {
-                        Column(
-                            Modifier.fillMaxSize().then(trackPaneFocus(ActivePane.List)),
-                        ) {
-                            // An MD3-style search pill. The results are shown inline in this
-                            // pane, so a plain text field is used instead of the state-based
-                            // SearchBarDefaults.InputField, whose touch-mode focus coupling
-                            // would force-expand the bar.
-                            Surface(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .padding(horizontal = 8.dp),
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                        Box(Modifier.fillMaxSize().then(trackPaneFocus(ActivePane.List))) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
                             ) {
-                                Row(
-                                    modifier =
+                                // The header panel: a fixed 152dp opaque item — the large
+                                // page title (the expanded state of the morph) at its
+                                // top and the search pill at its bottom. The title is
+                                // pinned to the top edge, so as the list scrolls down the
+                                // panel — and its title — collapse upward into the
+                                // compact bar above, which grows down to take over.
+                                item {
+                                    Column(
                                         Modifier
-                                            .fillMaxSize()
-                                            .padding(start = 8.dp, end = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Box(
-                                        // A fixed-width tappable slot; the icon is centered in it,
-                                        // so its edge lands 16.dp from the pill edge (8.dp row
-                                        // padding + 8.dp within the slot).
-                                        modifier =
-                                            Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(20.dp))
-                                                .then(
-                                                    if (fieldFocused) {
-                                                        Modifier.clickable {
-                                                            focusManager.clearFocus(force = true)
-                                                        }
-                                                    } else {
-                                                        Modifier
-                                                    },
-                                                ),
-                                        contentAlignment = Alignment.Center,
+                                            .fillMaxWidth()
+                                            .height(152.dp)
+                                            .background(MaterialTheme.colorScheme.surface),
                                     ) {
-                                        if (fieldFocused) {
-                                            Icon(
-                                                imageVector = Icons.Filled.ArrowBack,
-                                                contentDescription = "Dismiss search",
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Filled.Search,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(24.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(Modifier.weight(1f)) {
-                                        if (query.isEmpty()) {
-                                            Text(
-                                                text = "Search",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier =
-                                                    Modifier.align(Alignment.CenterStart),
-                                            )
-                                        }
-                                        BasicTextField(
-                                            state = textFieldState,
+                                        Text(
+                                            title,
+                                            modifier =
+                                                Modifier.padding(
+                                                    start = 16.dp,
+                                                    end = 16.dp,
+                                                    top = 4.dp,
+                                                    bottom = 12.dp,
+                                                ),
+                                            style =
+                                                MaterialTheme.typography
+                                                    .headlineSmall
+                                                    .copy(fontSize = 30.sp),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Spacer(Modifier.weight(1f))
+                                        // An MD3-style search pill. The results are shown
+                                        // inline in this pane, so a plain text field is
+                                        // used instead of the state-based
+                                        // SearchBarDefaults.InputField, whose touch-mode
+                                        // focus coupling would force-expand the bar.
+                                        Surface(
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
-                                                    .then(
-                                                        if (fieldFocusEnabled) {
+                                                    .height(48.dp)
+                                                    .padding(start = 8.dp, end = 8.dp),
+                                            shape = RoundedCornerShape(24.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                        ) {
+                                            Row(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxSize()
+                                                        .padding(start = 8.dp, end = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Box(
+                                                    // A fixed-width tappable slot; the
+                                                    // icon is centered in it, so its edge
+                                                    // lands 16.dp from the pill edge (8.dp
+                                                    // row padding + 8.dp within the slot).
+                                                    modifier =
+                                                        Modifier
+                                                            .size(40.dp)
+                                                            .clip(RoundedCornerShape(20.dp))
+                                                            .then(
+                                                                if (fieldFocused) {
+                                                                    Modifier.clickable {
+                                                                        focusManager.clearFocus(force = true)
+                                                                    }
+                                                                } else {
+                                                                    Modifier
+                                                                },
+                                                            ),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    if (fieldFocused) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.ArrowBack,
+                                                            contentDescription = "Dismiss search",
+                                                            modifier = Modifier.size(24.dp),
+                                                        )
+                                                    } else {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.Search,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(24.dp),
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(Modifier.width(8.dp))
+                                                Box(Modifier.weight(1f)) {
+                                                    if (query.isEmpty()) {
+                                                        Text(
+                                                            text = "Search",
+                                                            style = MaterialTheme.typography.bodyLarge,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier =
+                                                                Modifier.align(Alignment.CenterStart),
+                                                        )
+                                                    }
+                                                    BasicTextField(
+                                                        state = textFieldState,
+                                                        modifier =
                                                             Modifier
-                                                        } else {
-                                                            Modifier.focusProperties {
-                                                                canFocus = false
-                                                            }
-                                                        },
+                                                                .fillMaxWidth()
+                                                                .then(
+                                                                    if (fieldFocusEnabled) {
+                                                                        Modifier
+                                                                    } else {
+                                                                        Modifier.focusProperties {
+                                                                            canFocus = false
+                                                                        }
+                                                                    },
+                                                                )
+                                                                .onFocusChanged { fieldFocused = it.isFocused },
+                                                        textStyle =
+                                                            MaterialTheme.typography.bodyLarge.copy(
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            ),
+                                                        cursorBrush =
+                                                            SolidColor(MaterialTheme.colorScheme.primary),
+                                                        lineLimits = TextFieldLineLimits.SingleLine,
                                                     )
-                                                    .onFocusChanged { fieldFocused = it.isFocused },
-                                            textStyle =
-                                                MaterialTheme.typography.bodyLarge.copy(
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                ),
-                                            cursorBrush =
-                                                SolidColor(MaterialTheme.colorScheme.primary),
-                                            lineLimits = TextFieldLineLimits.SingleLine,
-                                        )
-                                    }
-                                    if (query.isNotEmpty()) {
-                                        IconButton(onClick = ::clearQuery) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Close,
-                                                contentDescription = "Clear",
-                                            )
+                                                }
+                                                if (query.isNotEmpty()) {
+                                                    IconButton(onClick = ::clearQuery) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.Close,
+                                                            contentDescription = "Clear",
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            if (isSearching) {
-                                LazyColumn(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                ) {
+                                if (isSearching) {
                                     items(searchEntries, key = { it.id }) {
                                         entry ->
                                         val matchedEntry = entry.entry
@@ -438,17 +499,12 @@ public fun PreferencePageScreen(
                                             )
                                         }
                                     }
-                                }
-                            } else {
-                                LazyColumn(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                ) {
-                                    // The page rows are each drawn in their own card, with the
-                                    // first and last showing rounded top/bottom corners.
+                                } else {
                                     item {
+                                        Spacer(Modifier.height(8.dp))
+                                        // The page rows are each drawn in their own card,
+                                        // with the first and last showing rounded
+                                        // top/bottom corners.
                                         PreferenceCardGroup {
                                             pages.forEach { page ->
                                                 card {
@@ -463,6 +519,33 @@ public fun PreferencePageScreen(
                                     }
                                 }
                             }
+                            // The compact bar: opaque and drawn ON TOP of the list,
+                            // growing down from the top edge as the header scrolls away.
+                            // It carries the collapsed (small) page title. As the list
+                            // scrolls down the large in-list title slides up behind this
+                            // bar and the small title takes its place — one continuous
+                            // transformation.
+                            Surface(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.TopStart)
+                                        .height(56.dp * listHeaderProgress)
+                                        .clipToBounds(),
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 6.dp * listHeaderProgress,
+                            ) {
+                                Text(
+                                    text = title,
+                                    modifier =
+                                        Modifier
+                                            .padding(horizontal = 16.dp)
+                                            .align(Alignment.CenterStart),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                 },
@@ -473,28 +556,77 @@ public fun PreferencePageScreen(
                             CompositionLocalProvider(
                                 LocalHighlightedPreferenceKey provides highlightedKey,
                             ) {
-                                val listState = rememberLazyListState()
-                                // Scroll to the row a search result navigated to, once the
-                                // page's list is composed (the detail pane is composed
-                                // asynchronously, so wait for it to be laid out).
-                                LaunchedEffect(page.id, scrollToIndex) {
-                                    val target = scrollToIndex ?: return@LaunchedEffect
-                                    // The detail pane is composed asynchronously, so wait for
-                                    // the page's list to be laid out with enough items first.
-                                    snapshotFlow { listState.layoutInfo.totalItemsCount }
-                                        .first { it > target }
-                                    listState.animateScrollToItem(target)
-                                    scrollToIndex = null
-                                }
-                                LazyColumn(
-                                    state = listState,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxSize()
-                                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                                            .then(trackPaneFocus(ActivePane.Detail)),
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .then(trackPaneFocus(ActivePane.Detail)),
                                 ) {
-                                    page.content(this)
+                                    // The detail state is shared across pages, so a page
+                                    // change starts at the top (the old offset would not
+                                    // mean anything with the new rows).
+                                    LaunchedEffect(page.id) {
+                                        detailState.scrollToItem(0)
+                                    }
+                                    // Scroll to the row a search result navigated to, once
+                                    // the page's list is composed (the detail pane is
+                                    // composed asynchronously, so wait for it to be laid
+                                    // out).
+                                    LaunchedEffect(page.id, scrollToIndex) {
+                                        val target = scrollToIndex ?: return@LaunchedEffect
+                                        // The detail pane is composed asynchronously, so
+                                        // wait for the page's list to be laid out with
+                                        // enough items first.
+                                        snapshotFlow { detailState.layoutInfo.totalItemsCount }
+                                            .first { it > target }
+                                        detailState.animateScrollToItem(target)
+                                        scrollToIndex = null
+                                    }
+                                    LazyColumn(
+                                        state = detailState,
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        page.content(this)
+                                    }
+                                    // The compact bar: declared after the list so it draws
+                                    // above the content, and clipped to a fraction of its
+                                    // height so it slides down from the top as the page's
+                                    // first row scrolls away.
+                                    if (detailHeaderProgress > 0.01f) {
+                                        Surface(
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .align(Alignment.TopStart)
+                                                    .height(56.dp * detailHeaderProgress)
+                                                    .clipToBounds(),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            shadowElevation = 6.dp * detailHeaderProgress,
+                                        ) {
+                                            Row(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                if (showBack) {
+                                                    IconButton(onClick = ::backAction) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.ArrowBack,
+                                                            contentDescription = "Back",
+                                                        )
+                                                    }
+                                                }
+                                                Text(
+                                                    text = page.title,
+                                                    modifier = Modifier.weight(1f),
+                                                    style = MaterialTheme.typography.titleLarge,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

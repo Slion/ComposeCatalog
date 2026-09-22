@@ -23,7 +23,7 @@
     <application
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="true"
-        android:label="ComposePreference Sample"
+        android:label="Compose Preference"
         android:resizeableActivity="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sample"

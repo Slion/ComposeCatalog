@@ -19,7 +19,7 @@ package net.slions.compose.preference.sample
 import androidx.compose.runtime.Composable
 import net.slions.compose.preference.PreferencePage
 
-const val SampleTitle = "ComposePreference Sample"
+const val SampleTitle = "Compose Preference"
 
 /**
  * The sample pages: one page per preference type, each exercising the type's various
