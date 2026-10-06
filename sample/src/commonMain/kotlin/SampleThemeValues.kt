@@ -20,8 +20,14 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.MutableStateFlow
+import net.slions.compose.preference.LocalPreferenceFlow
+import net.slions.compose.preference.MutablePreferences
+import net.slions.compose.preference.Preferences
 
 /**
  * The user-selectable theme properties the sample's "Theme" page can change.
@@ -113,6 +119,64 @@ internal const val DEFAULT_TINT_FACTOR_PERCENT = 5
 
 /** The tint-factor range, in percent, as a slider. */
 internal val TINT_FACTOR_RANGE: IntRange = 0..50
+
+// Preference keys the theme values are persisted under. Only primitive types (Int/String) are
+// stored, matching what the default preference flow can serialize on every platform.
+private const val KEY_THEME_MODE = "sample.theme.mode"
+private const val KEY_ACCENT = "sample.theme.accent"
+private const val KEY_CORNER_RADIUS = "sample.theme.cornerRadius"
+private const val KEY_FONT_SIZE = "sample.theme.fontSize"
+private const val KEY_TINT_FACTOR = "sample.theme.tintFactor"
+private const val KEY_FONT_FAMILY = "sample.theme.fontFamily"
+
+/**
+ * Rebuilds a [SampleThemeValues] from a [Preferences] store. Unset or invalid entries fall
+ * back to the built-in default for that field.
+ */
+private fun SampleThemeValues.Companion.fromPrefs(prefs: Preferences): SampleThemeValues =
+    SampleThemeValues(
+        themeMode = prefs.getString(KEY_THEME_MODE)?.let { name ->
+            SampleThemeMode.entries.firstOrNull { it.name == name }
+        } ?: SampleThemeMode.SYSTEM,
+        accent = prefs.getString(KEY_ACCENT),
+        cornerRadiusDp = prefs.getInt(KEY_CORNER_RADIUS),
+        fontSizePercent = prefs.getInt(KEY_FONT_SIZE),
+        tintFactorPercent = prefs.getInt(KEY_TINT_FACTOR),
+        fontFamily = prefs.getString(KEY_FONT_FAMILY),
+    )
+
+private fun Preferences.getString(key: String): String? = this[key]
+
+private fun Preferences.getInt(key: String): Int? = this[key]
+
+/** Writes this [SampleThemeValues] into a [MutablePreferences] store (nulls are removed). */
+private fun SampleThemeValues.writeTo(prefs: MutablePreferences) {
+    prefs[KEY_THEME_MODE] = themeMode.name
+    prefs[KEY_ACCENT] = accent
+    prefs[KEY_CORNER_RADIUS] = cornerRadiusDp
+    prefs[KEY_FONT_SIZE] = fontSizePercent
+    prefs[KEY_TINT_FACTOR] = tintFactorPercent
+    prefs[KEY_FONT_FAMILY] = fontFamily
+}
+
+/**
+ * The current [SampleThemeValues], backed by the shared preference [flow] (the single source of
+ * truth). Reads the store reactively into a [SampleThemeValues] and returns a [write] function
+ * that applies a new value — updating the UI and persisting it to disk via the flow. The sample
+ * provides this around [SampleTheme] so the whole app re-themes live and the settings survive a
+ * relaunch.
+ */
+@Composable
+internal fun rememberSampleThemeValues(
+    flow: MutableStateFlow<Preferences> = LocalPreferenceFlow.current,
+): Pair<SampleThemeValues, (SampleThemeValues) -> Unit> {
+    val store = flow.collectAsState().value
+    val values = remember(store) { SampleThemeValues.fromPrefs(store) }
+    val write: (SampleThemeValues) -> Unit = { next ->
+        flow.value = flow.value.toMutablePreferences().apply { next.writeTo(this) }
+    }
+    return values to write
+}
 
 /** The default M3 scheme for the given theme, used when no accent is set. */
 internal fun sampleDefaultScheme(dark: Boolean): ColorScheme =

@@ -25,11 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import net.slions.compose.preference.ProvidePreferenceLocals
 import net.slions.compose.preference.preferenceCategory
 
 /**
@@ -39,24 +36,27 @@ import net.slions.compose.preference.preferenceCategory
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 actual fun SampleApp() {
-    var themeValues by remember { mutableStateOf(SampleThemeValues()) }
-    val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
-    CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
-        SampleTheme(darkTheme = darkTheme) {
-            Scaffold(
-                topBar = { TopAppBar(title = { Text(text = SampleTitle) }) },
-            ) { contentPadding ->
-                val pages = samplePages(themeValues) { themeValues = it }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding,
-                ) {
-                    pages.forEach { page ->
-                        preferenceCategory(
-                            key = "page_${page.id}",
-                            title = page.title,
-                        )
-                        page.content(this)
+    // The theme flow is the single source of truth; the default flow persists it to disk.
+    ProvidePreferenceLocals {
+        val (themeValues, writeThemeValues) = rememberSampleThemeValues()
+        val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
+        CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
+            SampleTheme(darkTheme = darkTheme) {
+                Scaffold(
+                    topBar = { TopAppBar(title = { Text(text = SampleTitle) }) },
+                ) { contentPadding ->
+                    val pages = samplePages(themeValues, writeThemeValues)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = contentPadding,
+                    ) {
+                        pages.forEach { page ->
+                            preferenceCategory(
+                                key = "page_${page.id}",
+                                title = page.title,
+                            )
+                            page.content(this)
+                        }
                     }
                 }
             }

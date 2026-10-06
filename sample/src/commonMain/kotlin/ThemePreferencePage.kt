@@ -53,20 +53,24 @@ fun themePreferencePage(
     PreferencePage(
         id = "theme",
         title = "Theme",
-        summary = "Theme mode, accent color, corner radius, text size, and neutral tint.",
+        summary = "Style, colors, and text. Settings are persisted.",
     ) {
-        preferenceCategory(key = "theme_appearance_category", title = "Appearance")
-        preferenceCardGroup(key = "theme_appearance_group") {
+        preferenceCategory(key = "theme_style_category", title = "Appearance")
+        preferenceCardGroup(key = "theme_style_group") {
             card {
                 ListPreference(
                     value = values.themeMode,
                     onValueChange = { onValuesChange(values.copy(themeMode = it)) },
                     values = SampleThemeMode.entries,
-                    title = "Theme",
+                    title = "Style",
                     summary = values.themeMode.label,
                     valueToText = { AnnotatedString(it.label) },
                 )
             }
+        }
+
+        preferenceCategory(key = "theme_colors_category", title = "Colors")
+        preferenceCardGroup(key = "theme_colors_group") {
             card {
                 AccentList(
                     value = values.accent ?: "",
@@ -110,8 +114,8 @@ fun themePreferencePage(
                     value = (values.fontSizePercent ?: 100).toFloat(),
                     onValueChange = { onValuesChange(values.copy(fontSizePercent = it.toInt())) },
                     valueRange = 80f..140f,
-                    // 10% steps over 80..140 = 6 segments, so 5 intermediate stops.
-                    valueSteps = (140 - 80) / 10 - 1,
+                    // 5% steps over 80..140 = 12 segments, so 11 intermediate stops.
+                    valueSteps = (140 - 80) / 5 - 1,
                     valueText = { "${it.toInt()}%" },
                 )
             }

@@ -18,25 +18,29 @@ package net.slions.compose.preference.sample
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.CompositionLocalProvider
 import net.slions.compose.preference.PreferencePageScreen
 import net.slions.compose.preference.ProvidePreferenceLocals
+import net.slions.compose.preference.ProvidePreferenceTheme
 
 @Composable
 actual fun SampleApp() {
-    var themeValues by remember { mutableStateOf(SampleThemeValues()) }
-    val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
-    CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
-        SampleTheme(darkTheme = darkTheme) {
-            ProvidePreferenceLocals {
-                PreferencePageScreen(
-                    title = SampleTitle,
-                    pages = samplePages(themeValues) { themeValues = it },
-                )
+    // The theme flow is the single source of truth; the default flow persists it to disk.
+    ProvidePreferenceLocals {
+        val (themeValues, writeThemeValues) = rememberSampleThemeValues()
+        val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
+        CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
+            SampleTheme(darkTheme = darkTheme) {
+                // Re-provide the preference theme *inside* SampleTheme: its default colors
+                // (title/summary/icon, drawn from MaterialTheme.colorScheme) are otherwise
+                // captured once, against the outer light scheme, and would not follow the
+                // live light/dark switch.
+                ProvidePreferenceTheme {
+                    PreferencePageScreen(
+                        title = SampleTitle,
+                        pages = samplePages(themeValues, writeThemeValues),
+                    )
+                }
             }
         }
     }

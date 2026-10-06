@@ -42,7 +42,16 @@ internal actual fun sampleColorScheme(
         // No fixed accent: the platform dynamic (wallpaper) colors on Android 12+.
         seedArgb == null && dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val dynamic = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            // The "Neutral tint" slider is a no-op on the raw dynamic scheme. When the user
+            // moves it off its default, re-derive the whole scheme from the dynamic primary
+            // so the neutral roles (background, surfaces, text) respond to the slider. At the
+            // default the pure dynamic colors are kept, so "Default" still looks native.
+            if (tintFactor == DEFAULT_TINT_FACTOR_PERCENT / 100f) {
+                dynamic
+            } else {
+                sampleSeededScheme(dynamic.primary.toArgb(), dark, tintFactor)
+            }
         }
         seedArgb != null -> sampleSeededScheme(seedArgb, dark, tintFactor)
         else -> sampleDefaultScheme(dark)
