@@ -59,7 +59,12 @@ internal fun applySampleTheme(
 ) {
     val values = LocalSampleThemeValues.current
     MaterialTheme(
-        colorScheme = sampleColorScheme(values.accent, darkTheme, dynamicColor),
+        colorScheme = sampleColorScheme(
+            accent = values.accent,
+            dark = darkTheme,
+            dynamicColor = dynamicColor,
+            tintFactor = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT) / 100f,
+        ),
         shapes = sampleShapes(values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP),
         typography = sampleTypography(values.fontSizePercent ?: 100, values.fontFamily),
         content = content,
@@ -76,14 +81,14 @@ internal fun sampleShapes(cornerRadiusDp: Int): Shapes =
         extraLarge = RoundedCornerShape((cornerRadiusDp * 2.5f).dp),
     )
 
-/** The [fontFamily] type scale, every style scaled by [percent] (clamped to 85..130). */
+/** The [fontFamily] type scale, every style scaled by [percent] (clamped to 80..140). */
 internal fun sampleTypography(percent: Int, fontFamily: String?): Typography {
     val family = when (fontFamily) {
         SampleThemeValues.SERIF_FONT -> FontFamily.Serif
         SampleThemeValues.MONO_FONT -> FontFamily.Monospace
         else -> FontFamily.Default
     }
-    val factor = percent.coerceIn(85, 130) / 100f
+    val factor = percent.coerceIn(80, 140) / 100f
     // Scale the font size and set the family; the M3 type scale's proportional line-height
     // and letter-spacing stay correct relative to the new size.
     fun TextStyle.scale(): TextStyle = copy(

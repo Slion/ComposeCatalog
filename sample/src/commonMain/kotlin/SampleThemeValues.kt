@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
  * @param cornerRadiusDp corner-radius scale for cards/rows (the "medium" size of the scale);
  *   null = [DEFAULT_CORNER_RADIUS_DP].
  * @param fontSizePercent font-size scale as a percentage of the default type scale; null = 100.
+ * @param tintFactorPercent how strongly the accent tints the neutral roles (background,
+ *   surfaces, text), as a percentage of the seed's chroma; null = [DEFAULT_TINT_FACTOR_PERCENT].
  * @param fontFamily one of [FONT_FAMILIES]; null = [DEFAULT_FONT].
  */
 @Immutable
@@ -41,6 +43,7 @@ data class SampleThemeValues(
     val accent: String? = null,
     val cornerRadiusDp: Int? = null,
     val fontSizePercent: Int? = null,
+    val tintFactorPercent: Int? = null,
     val fontFamily: String? = null,
 ) {
     companion object {
@@ -101,6 +104,16 @@ val LocalSampleThemeValues = staticCompositionLocalOf { SampleThemeValues() }
 /** Default corner radius (the "medium" size of the shape scale) in dp. */
 internal const val DEFAULT_CORNER_RADIUS_DP = 12
 
+/**
+ * The default neutral-tint factor as a percentage: how strongly the seed hue tints the
+ * neutral roles (background, surfaces, text). 5% is the standard M3 dynamic factor; higher
+ * values push the accent into the neutrals.
+ */
+internal const val DEFAULT_TINT_FACTOR_PERCENT = 5
+
+/** The tint-factor range, in percent, as a slider. */
+internal val TINT_FACTOR_RANGE: IntRange = 0..50
+
 /** The default M3 scheme for the given theme, used when no accent is set. */
 internal fun sampleDefaultScheme(dark: Boolean): ColorScheme =
     if (dark) darkColorScheme() else lightColorScheme()
@@ -117,12 +130,16 @@ internal fun parseHexColor(hex: String, fallback: Color = Color.Unspecified): Co
  * The sample's color scheme: dynamic colors on Android when [dynamicColor] is on and no
  * [accent] is set; a fixed [accent] (a hex color string) seeds the full scheme via
  * [sampleSeededScheme]; otherwise the default M3 scheme.
+ *
+ * @param tintFactor the neutral-tint factor as a fraction (e.g. 0.05 = 5%), controlling how
+ *   strongly the seed hue tints the neutral roles.
  */
 @Composable
 internal expect fun sampleColorScheme(
     accent: String?,
     dark: Boolean,
     dynamicColor: Boolean,
+    tintFactor: Float,
 ): ColorScheme
 
 /**
@@ -132,7 +149,11 @@ internal expect fun sampleColorScheme(
  * the baseline palette, so components that read multiple roles (the switch knob is
  * `onPrimary`, the track `primary`) don't follow the accent. This maps the seed's HCT hue +
  * chroma to the standard M3 tones for the given theme, and tints the neutral roles
- * (background, surfaces, text) with the seed hue at a small fraction of its chroma, matching
- * how the dynamic (wallpaper-seeded) scheme looks.
+ * (background, surfaces, text) with the seed hue at [tintFactor] of its chroma, matching how
+ * the dynamic (wallpaper-seeded) scheme looks.
  */
-internal expect fun sampleSeededScheme(seed: Int, dark: Boolean): ColorScheme
+internal expect fun sampleSeededScheme(
+    seed: Int,
+    dark: Boolean,
+    tintFactor: Float,
+): ColorScheme

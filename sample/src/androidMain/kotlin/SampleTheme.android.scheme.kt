@@ -30,6 +30,7 @@ internal actual fun sampleColorScheme(
     accent: String?,
     dark: Boolean,
     dynamicColor: Boolean,
+    tintFactor: Float,
 ): ColorScheme {
     val seedArgb = accent?.let { hex ->
         runCatching {
@@ -43,21 +44,21 @@ internal actual fun sampleColorScheme(
             val context = LocalContext.current
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        seedArgb != null -> sampleSeededScheme(seedArgb, dark)
+        seedArgb != null -> sampleSeededScheme(seedArgb, dark, tintFactor)
         else -> sampleDefaultScheme(dark)
     }
 }
 
-internal actual fun sampleSeededScheme(seed: Int, dark: Boolean): ColorScheme {
+internal actual fun sampleSeededScheme(seed: Int, dark: Boolean, tintFactor: Float): ColorScheme {
     val base = sampleDefaultScheme(dark)
     val hct = FloatArray(3)
     ColorUtils.colorToM3HCT(seed, hct)
     val hue = hct[0]
     val chroma = hct[1]
     fun t(tone: Int) = Color(ColorUtils.M3HCTToColor(hue, chroma, tone.toFloat()))
-    // Neutral roles: the seed's hue at a small fraction of its chroma (Material tints its
-    // dynamic neutral palette at 0.05).
-    fun n(tone: Int) = Color(ColorUtils.M3HCTToColor(hue, chroma * 0.05f, tone.toFloat()))
+    // Neutral roles: the seed's hue at [tintFactor] of its chroma (Material tints its dynamic
+    // neutral palette at 0.05; a higher factor pushes the accent into the neutrals).
+    fun n(tone: Int) = Color(ColorUtils.M3HCTToColor(hue, chroma * tintFactor, tone.toFloat()))
     // The M3 tonal palette assumes a vivid seed. With a *dark* seed (e.g. #386A20, lightness
     // ~0.4) the dark-mode tone 80 lands near-black and vanishes against the dark surface — the
     // slider's active track disappears. Floor the primary's lightness (hue + chroma kept).

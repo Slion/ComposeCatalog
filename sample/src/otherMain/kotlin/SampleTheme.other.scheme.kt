@@ -24,13 +24,14 @@ internal actual fun sampleColorScheme(
     accent: String?,
     dark: Boolean,
     dynamicColor: Boolean,
+    tintFactor: Float,
 ): ColorScheme {
     // No dynamic (wallpaper) colors off Android; a fixed accent seeds the scheme.
     val seed = accent?.let { parseHexArgb(it) }
-    return seed?.let { sampleSeededScheme(it, dark) } ?: sampleDefaultScheme(dark)
+    return seed?.let { sampleSeededScheme(it, dark, tintFactor) } ?: sampleDefaultScheme(dark)
 }
 
-internal actual fun sampleSeededScheme(seed: Int, dark: Boolean): ColorScheme {
+internal actual fun sampleSeededScheme(seed: Int, dark: Boolean, tintFactor: Float): ColorScheme {
     val base = sampleDefaultScheme(dark)
     val hsl = hslOf(seed)
     val hue = hsl[0]
@@ -41,10 +42,11 @@ internal actual fun sampleSeededScheme(seed: Int, dark: Boolean): ColorScheme {
         val saturation = (hsl[1] * 0.6f) * (lightness.coerceIn(0.1f, 0.9f))
         return hslColor(hue, saturation.coerceIn(0f, 0.9f), lightness)
     }
-    // Neutral roles: the seed hue at a very low saturation (a soft tint of the M3 neutrals).
+    // Neutral roles: the seed hue at a low saturation scaled by [tintFactor] (a soft tint of
+    // the M3 neutrals; a higher factor pushes the accent into the neutrals).
     fun n(tone: Int): Color {
         val lightness = tone / 100f
-        return hslColor(hue, (hsl[1] * 0.05f), lightness)
+        return hslColor(hue, (hsl[1] * tintFactor).coerceIn(0f, 0.9f), lightness)
     }
     // Floor the dark-mode primary so a dark seed doesn't vanish on the dark surface.
     val primary = if (dark) {

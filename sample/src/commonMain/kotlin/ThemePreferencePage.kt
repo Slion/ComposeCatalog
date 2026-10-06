@@ -37,6 +37,7 @@ import net.slions.compose.preference.ListPreference
 import net.slions.compose.preference.ListPreferenceType
 import net.slions.compose.preference.PreferencePage
 import net.slions.compose.preference.SliderPreference
+import net.slions.compose.preference.preferenceCardGroup
 import net.slions.compose.preference.preferenceCategory
 
 /**
@@ -52,60 +53,79 @@ fun themePreferencePage(
     PreferencePage(
         id = "theme",
         title = "Theme",
-        summary = "Theme mode, accent color, corner radius, and text size.",
+        summary = "Theme mode, accent color, corner radius, text size, and neutral tint.",
     ) {
         preferenceCategory(key = "theme_appearance_category", title = "Appearance")
-        item(key = "theme_mode", contentType = "ListPreference") {
-            ListPreference(
-                value = values.themeMode,
-                onValueChange = { onValuesChange(values.copy(themeMode = it)) },
-                values = SampleThemeMode.entries,
-                title = "Theme",
-                summary = values.themeMode.label,
-                valueToText = { AnnotatedString(it.label) },
-            )
-        }
-        item(key = "theme_accent", contentType = "Preference") {
-            AccentList(
-                value = values.accent ?: "",
-                onValueChange = { onValuesChange(values.copy(accent = it.ifEmpty { null })) },
-                values = SampleThemeValues.ACCENT_PRESETS,
-                title = "Accent color",
-                summary = accentNameOf(values.accent),
-            )
+        preferenceCardGroup(key = "theme_appearance_group") {
+            card {
+                ListPreference(
+                    value = values.themeMode,
+                    onValueChange = { onValuesChange(values.copy(themeMode = it)) },
+                    values = SampleThemeMode.entries,
+                    title = "Theme",
+                    summary = values.themeMode.label,
+                    valueToText = { AnnotatedString(it.label) },
+                )
+            }
+            card {
+                AccentList(
+                    value = values.accent ?: "",
+                    onValueChange = { onValuesChange(values.copy(accent = it.ifEmpty { null })) },
+                    values = SampleThemeValues.ACCENT_PRESETS,
+                    title = "Accent color",
+                    summary = accentNameOf(values.accent),
+                )
+            }
+            card {
+                ThemeSlider(
+                    title = "Neutral tint",
+                    value = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT).toFloat(),
+                    onValueChange = { onValuesChange(values.copy(tintFactorPercent = it.toInt())) },
+                    valueRange = TINT_FACTOR_RANGE.first.toFloat()..TINT_FACTOR_RANGE.last.toFloat(),
+                    // M3 'steps' counts intermediate stops (segments = steps + 1), so for 5% steps
+                    // over 0..50 (10 segments) we pass 9, not 10.
+                    valueSteps = (TINT_FACTOR_RANGE.last - TINT_FACTOR_RANGE.first) / 5 - 1,
+                    valueText = { "${it.toInt()}%" },
+                    live = true,
+                )
+            }
         }
 
         preferenceCategory(key = "theme_shapes_text_category", title = "Shapes and text")
-        item(key = "theme_corner_radius", contentType = "SliderPreference") {
-            ThemeSlider(
-                title = "Corner radius",
-                value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),
-                onValueChange = { onValuesChange(values.copy(cornerRadiusDp = it.toInt())) },
-                valueRange = 0f..32f,
-                valueSteps = 31,
-                valueText = { "${it.toInt()} dp" },
-            )
-        }
-        item(key = "theme_font_size", contentType = "SliderPreference") {
-            ThemeSlider(
-                title = "Text size",
-                value = (values.fontSizePercent ?: 100).toFloat(),
-                onValueChange = { onValuesChange(values.copy(fontSizePercent = it.toInt())) },
-                valueRange = 85f..130f,
-                valueSteps = 44,
-                valueText = { "${it.toInt()}%" },
-            )
-        }
-        item(key = "theme_font_family", contentType = "ListPreference") {
-            ListPreference(
-                value = values.fontFamily ?: SampleThemeValues.DEFAULT_FONT,
-                onValueChange = { onValuesChange(values.copy(fontFamily = it)) },
-                values = SampleThemeValues.FONT_FAMILIES,
-                title = "Font",
-                summary = fontLabel(values.fontFamily),
-                type = ListPreferenceType.DROPDOWN_MENU,
-                valueToText = { AnnotatedString(fontLabel(it)) },
-            )
+        preferenceCardGroup(key = "theme_shapes_text_group") {
+            card {
+                ThemeSlider(
+                    title = "Corner radius",
+                    value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),
+                    onValueChange = { onValuesChange(values.copy(cornerRadiusDp = it.toInt())) },
+                    valueRange = 0f..32f,
+                    // 1 dp steps over 0..32 = 32 segments, so 31 intermediate stops.
+                    valueSteps = 32 - 1,
+                    valueText = { "${it.toInt()} dp" },
+                )
+            }
+            card {
+                ThemeSlider(
+                    title = "Text size",
+                    value = (values.fontSizePercent ?: 100).toFloat(),
+                    onValueChange = { onValuesChange(values.copy(fontSizePercent = it.toInt())) },
+                    valueRange = 80f..140f,
+                    // 10% steps over 80..140 = 6 segments, so 5 intermediate stops.
+                    valueSteps = (140 - 80) / 10 - 1,
+                    valueText = { "${it.toInt()}%" },
+                )
+            }
+            card {
+                ListPreference(
+                    value = values.fontFamily ?: SampleThemeValues.DEFAULT_FONT,
+                    onValueChange = { onValuesChange(values.copy(fontFamily = it)) },
+                    values = SampleThemeValues.FONT_FAMILIES,
+                    title = "Font",
+                    summary = fontLabel(values.fontFamily),
+                    type = ListPreferenceType.DROPDOWN_MENU,
+                    valueToText = { AnnotatedString(fontLabel(it)) },
+                )
+            }
         }
     }
 
@@ -121,13 +141,22 @@ private fun ThemeSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     valueSteps: Int,
     valueText: (Float) -> String,
+    live: Boolean = false,
 ) {
-    var sliderValue by remember(value) { mutableFloatStateOf(value) }
+    // The drag position is its own stable state (not keyed on [value]); keying it on [value]
+    // would re-init it on every commit, which — with a live slider that commits while dragging —
+    // makes the thumb fight the finger and the effect never settles.
+    var sliderValue by remember { mutableFloatStateOf(value) }
     SliderPreference(
         value = value,
         onValueChange = onValueChange,
         sliderValue = sliderValue,
-        onSliderValueChange = { sliderValue = it },
+        onSliderValueChange = {
+            sliderValue = it
+            // Live: commit while dragging so the effect applies in real time; otherwise only
+            // on release (the default, via onValueChange).
+            if (live) onValueChange(it)
+        },
         title = title,
         valueRange = valueRange,
         valueSteps = valueSteps,

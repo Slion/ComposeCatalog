@@ -31,7 +31,12 @@ import androidx.core.view.WindowCompat
 actual fun SampleTheme(darkTheme: Boolean, dynamicColor: Boolean, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val values = LocalSampleThemeValues.current
-    val colorScheme = sampleColorScheme(values.accent, darkTheme, dynamicColor)
+    val colorScheme = sampleColorScheme(
+        accent = values.accent,
+        dark = darkTheme,
+        dynamicColor = dynamicColor,
+        tintFactor = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT) / 100f,
+    )
 
     val view = LocalView.current
     if (!view.isInEditMode) {
