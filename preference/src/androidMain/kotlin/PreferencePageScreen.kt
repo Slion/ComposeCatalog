@@ -77,7 +77,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
@@ -85,6 +88,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -209,6 +213,7 @@ public fun PreferencePageScreen(
         }
     }
     val focusManager = LocalFocusManager.current
+    val fieldFocusRequester = remember { FocusRequester() }
     var fieldFocused by remember { mutableStateOf(false) }
 
     fun clearQuery() {
@@ -280,27 +285,21 @@ public fun PreferencePageScreen(
     val showBack =
         !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail && currentPage != null
 
-    // The big page title + search pill are the first item of the list pane's column, so
-    // they scroll away with the content. While that is happening, a compact bar (clipped
-    // to a fraction of its height) grows in under it; the same trick applies to the
-    // detail pane, whose bar carries the back arrow in single-pane mode. Each bar's
-    // height is a pure function of its list's scroll offset, so it can never desync
-    // from the content. The offsets are observed via snapshotFlow because reading them
-    // directly in composition does not reliably schedule a recomposition.
-    //
-    // The list pane's collapse is a single continuous transformation driven by p
-    // (1 = list at top, 0 = fully collapsed, over 152dp of scroll):
-    // - the title is drawn in the OVERLAY (not the list), so it moves at the panel's
-    //   speed: its bottom edge goes from 96dp (top, 24sp) to 44dp (collapsed, 22sp) —
-    //   i.e. it grows and moves down as the list approaches the top, and ends exactly
-    //   on the compact bar's title position, so there is no visible handoff;
-    // - the first list item is a fixed 152dp opaque panel carrying the search pill at
-    //   its bottom (104..152dp); its bottom edge (152 - d) IS the extending panel: it
-    //   covers the 56dp bar behind the list while at the top, and the bar is fully
-    //   uncovered exactly when the panel (and the pill) has scrolled away.
+    // Collapsing header: a single persistent 56dp bar (the title bar) that never
+    // vanishes. Its title morphs continuously between 30sp (expanded) and 22sp
+    // (collapsed), and the search pill — the first in-list item — slides behind the
+    // bar as the list scrolls, so the header's effective height shrinks from
+    // bar+pill to just the bar. A faded search affordance fades into the bar's
+    // trailing edge and, when tapped, scrolls the pill back into view and focuses
+    // the field. The same pattern (bar height as a pure function of scroll offset)
+    // applies to the detail pane, whose bar carries the back arrow in single-pane
+    // mode. Offsets are observed via snapshotFlow because reading them directly in
+    // composition does not reliably schedule a recomposition.
     val listState = remember { LazyListState() }
     val detailState = rememberLazyListState()
-    val listHeaderHeight = with(LocalDensity.current) { 152.dp.toPx() }
+    // The scroll distance at which the search pill (56dp inset + 48dp tall) has fully
+    // slid behind the 56dp bar: 104 - 56 = 48dp.
+    val listHeaderHeight = with(LocalDensity.current) { 48.dp.toPx() }
     val barHeightPx = with(LocalDensity.current) { 56.dp.toPx() }
     fun headerProgress(state: LazyListState, distancePx: Float): Float =
         if (state.firstVisibleItemIndex == 0) {
@@ -338,36 +337,14 @@ public fun PreferencePageScreen(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
                             ) {
-                                // The header panel: a fixed 152dp opaque item — the large
-                                // page title (the expanded state of the morph) at its
-                                // top and the search pill at its bottom. The title is
-                                // pinned to the top edge, so as the list scrolls down the
-                                // panel — and its title — collapse upward into the
-                                // compact bar above, which grows down to take over.
+                                // The search pill: an in-list item that scrolls with the
+                                // content. The 56dp top spacer pushes the pill just
+                                // below the fixed 56dp header bar when the list is at
+                                // the top; as the list scrolls the pill slides up behind
+                                // the bar, collapsing the header down to just the bar.
                                 item {
-                                    Column(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(152.dp)
-                                            .background(MaterialTheme.colorScheme.surface),
-                                    ) {
-                                        Text(
-                                            title,
-                                            modifier =
-                                                Modifier.padding(
-                                                    start = 16.dp,
-                                                    end = 16.dp,
-                                                    top = 4.dp,
-                                                    bottom = 12.dp,
-                                                ),
-                                            style =
-                                                MaterialTheme.typography
-                                                    .headlineSmall
-                                                    .copy(fontSize = 30.sp),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        Spacer(Modifier.weight(1f))
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Spacer(Modifier.height(56.dp))
                                         // An MD3-style search pill. The results are shown
                                         // inline in this pane, so a plain text field is
                                         // used instead of the state-based
@@ -449,6 +426,7 @@ public fun PreferencePageScreen(
                                                                         }
                                                                     },
                                                                 )
+                                                                .focusRequester(fieldFocusRequester)
                                                                 .onFocusChanged { fieldFocused = it.isFocused },
                                                         textStyle =
                                                             MaterialTheme.typography.bodyLarge.copy(
@@ -519,32 +497,68 @@ public fun PreferencePageScreen(
                                     }
                                 }
                             }
-                            // The compact bar: opaque and drawn ON TOP of the list,
-                            // growing down from the top edge as the header scrolls away.
-                            // It carries the collapsed (small) page title. As the list
-                            // scrolls down the large in-list title slides up behind this
-                            // bar and the small title takes its place — one continuous
-                            // transformation.
+                            // The single persistent header: a fixed 56dp bar at the top
+                            // that never vanishes — the header's height changes by the
+                            // pill sliding in/out below it, and the title morphs
+                            // continuously in place (22sp collapsed → 30sp expanded).
                             Surface(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .align(Alignment.TopStart)
-                                        .height(56.dp * listHeaderProgress)
-                                        .clipToBounds(),
+                                        .height(56.dp),
                                 color = MaterialTheme.colorScheme.surface,
                                 shadowElevation = 6.dp * listHeaderProgress,
                             ) {
-                                Text(
-                                    text = title,
-                                    modifier =
-                                        Modifier
-                                            .padding(horizontal = 16.dp)
-                                            .align(Alignment.CenterStart),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = title,
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .padding(horizontal = 16.dp),
+                                        style =
+                                            MaterialTheme.typography.titleLarge.copy(
+                                                fontSize = lerp(30f, 22f, listHeaderProgress).sp,
+                                            ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    // A search affordance that fades in on the right as
+                                    // the pill collapses behind the bar; tapping it
+                                    // scrolls the pill back into view and focuses it.
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .height(48.dp)
+                                                // Alpha must wrap the background, so
+                                                // the whole affordance — pill and
+                                                // icon — fades, not just the icon.
+                                                .alpha(listHeaderProgress)
+                                                .clip(RoundedCornerShape(24.dp))
+                                                .background(
+                                                    MaterialTheme.colorScheme.surfaceVariant,
+                                                )
+                                                .padding(horizontal = 20.dp)
+                                                .clickable {
+                                                    scope.launch {
+                                                        listState.animateScrollToItem(0)
+                                                        fieldFocusRequester.requestFocus()
+                                                    }
+                                                },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Search,
+                                            contentDescription = "Search",
+                                            modifier = Modifier.size(24.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
