@@ -19,10 +19,6 @@ package net.slions.compose.preference.sample
 import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
@@ -34,14 +30,8 @@ import androidx.core.view.WindowCompat
 @Composable
 actual fun SampleTheme(darkTheme: Boolean, dynamicColor: Boolean, content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val colorScheme =
-        when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
-            darkTheme -> darkColorScheme()
-            else -> lightColorScheme()
-        }
+    val values = LocalSampleThemeValues.current
+    val colorScheme = sampleColorScheme(values.accent, darkTheme, dynamicColor)
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -60,5 +50,10 @@ actual fun SampleTheme(darkTheme: Boolean, dynamicColor: Boolean, content: @Comp
         }
     }
 
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(
+        colorScheme = colorScheme,
+        shapes = sampleShapes(values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP),
+        typography = sampleTypography(values.fontSizePercent ?: 100, values.fontFamily),
+        content = content,
+    )
 }

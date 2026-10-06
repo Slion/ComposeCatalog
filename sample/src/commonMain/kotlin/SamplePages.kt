@@ -22,13 +22,22 @@ import net.slions.compose.preference.PreferencePage
 const val SampleTitle = "Compose Preference"
 
 /**
- * The sample pages: one page per preference type, each exercising the type's various
- * configurations. Card groups and categories are used throughout the pages, so they have no
- * page of their own. Hosted by [net.slions.compose.preference.PreferencePageScreen].
+ * The sample pages: the live "Theme" page first, then one page per preference type, each
+ * exercising the type's various configurations. Card groups and categories are used
+ * throughout the pages, so they have no page of their own. Hosted by
+ * [net.slions.compose.preference.PreferencePageScreen].
+ *
+ * @param themeValues the current [SampleThemeValues], applied to the app by [SampleTheme].
+ * @param onThemeValuesChange invoked with the next [SampleThemeValues] when the Theme page
+ *   changes a setting.
  */
 @Composable
-fun samplePages(): List<PreferencePage> =
+fun samplePages(
+    themeValues: SampleThemeValues,
+    onThemeValuesChange: (SampleThemeValues) -> Unit,
+): List<PreferencePage> =
     listOf(
+        themePreferencePage(themeValues, onThemeValuesChange),
         preferenceRowPage(),
         checkboxPreferencePage(),
         switchPreferencePage(),

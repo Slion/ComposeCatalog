@@ -20,5 +20,5 @@ import androidx.compose.runtime.Composable
 
 @Composable
 actual fun SampleTheme(darkTheme: Boolean, dynamicColor: Boolean, content: @Composable () -> Unit) {
-    commonSampleTheme(darkTheme = darkTheme, content = content)
+    applySampleTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, content = content)
 }

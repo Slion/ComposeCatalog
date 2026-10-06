@@ -16,6 +16,7 @@
 
 package net.slions.compose.preference.sample
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +24,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import net.slions.compose.preference.preferenceCategory
 
@@ -33,21 +39,25 @@ import net.slions.compose.preference.preferenceCategory
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 actual fun SampleApp() {
-    SampleTheme {
-        Scaffold(
-            topBar = { TopAppBar(title = { Text(text = SampleTitle) }) },
-        ) { contentPadding ->
-            val pages = samplePages()
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = contentPadding,
-            ) {
-                pages.forEach { page ->
-                    preferenceCategory(
-                        key = "page_${page.id}",
-                        title = page.title,
-                    )
-                    page.content(this)
+    var themeValues by remember { mutableStateOf(SampleThemeValues()) }
+    val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
+    CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
+        SampleTheme(darkTheme = darkTheme) {
+            Scaffold(
+                topBar = { TopAppBar(title = { Text(text = SampleTitle) }) },
+            ) { contentPadding ->
+                val pages = samplePages(themeValues) { themeValues = it }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding,
+                ) {
+                    pages.forEach { page ->
+                        preferenceCategory(
+                            key = "page_${page.id}",
+                            title = page.title,
+                        )
+                        page.content(this)
+                    }
                 }
             }
         }
