@@ -221,3 +221,14 @@ internal expect fun sampleSeededScheme(
     dark: Boolean,
     tintFactor: Float,
 ): ColorScheme
+
+/**
+ * The platform's *actual* default accent (what "Default" resolves to), as a [Color].
+ *
+ * On Android 12+ this is the system dynamic (wallpaper) accent, resolved independently of
+ * which option is currently selected — so the Color row and dialog can show the true
+ * "what Default will look like" swatch. Returns null where there is no such platform accent
+ * (e.g. desktop), letting the caller fall back to the current theme's primary.
+ */
+@Composable
+internal expect fun systemDefaultAccentColor(dark: Boolean): Color?

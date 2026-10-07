@@ -58,6 +58,19 @@ internal actual fun sampleColorScheme(
     }
 }
 
+@Composable
+internal actual fun systemDefaultAccentColor(dark: Boolean): Color? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+    // The system dynamic accent, resolved from the context independently of the current
+    // selection — this is what "Default" actually resolves to on this device.
+    val context = LocalContext.current
+    return if (dark) {
+        dynamicDarkColorScheme(context).primary
+    } else {
+        dynamicLightColorScheme(context).primary
+    }
+}
+
 internal actual fun sampleSeededScheme(seed: Int, dark: Boolean, tintFactor: Float): ColorScheme {
     val base = sampleDefaultScheme(dark)
     val hct = FloatArray(3)

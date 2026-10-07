@@ -31,6 +31,13 @@ internal actual fun sampleColorScheme(
     return seed?.let { sampleSeededScheme(it, dark, tintFactor) } ?: sampleDefaultScheme(dark)
 }
 
+@Composable
+internal actual fun systemDefaultAccentColor(dark: Boolean): Color? {
+    // There is no platform dynamic accent off Android; the caller falls back to the current
+    // theme's primary.
+    return null
+}
+
 internal actual fun sampleSeededScheme(seed: Int, dark: Boolean, tintFactor: Float): ColorScheme {
     val base = sampleDefaultScheme(dark)
     val hsl = hslOf(seed)
