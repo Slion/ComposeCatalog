@@ -34,7 +34,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
+import dev.vicart.compose.material.symbols.MaterialSymbol
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.Role
@@ -60,6 +65,7 @@ fun themePreferencePage(
         id = "theme",
         title = "Theme",
         summary = "Mode, colors, and text. Settings are persisted.",
+        icon = { MaterialSymbol.Outlined(icon = "palette") },
     ) {
         preferenceCategory(key = "theme_colors_category", title = "Colors")
         preferenceCardGroup(key = "theme_colors_group") {
@@ -70,6 +76,7 @@ fun themePreferencePage(
                     values = SampleThemeMode.entries,
                     title = "Mode",
                     summary = values.themeMode.label,
+                    icon = { Icon(imageVector = Icons.Outlined.Contrast, contentDescription = null) },
                     valueToText = { AnnotatedString(it.label) },
                 )
             }
@@ -80,6 +87,7 @@ fun themePreferencePage(
                     values = SampleThemeValues.ACCENT_PRESETS,
                     title = "Color",
                     summary = accentNameOf(values.accent),
+                    icon = { MaterialSymbol.Outlined(icon = "colors") },
                 )
             }
             card {
@@ -93,36 +101,13 @@ fun themePreferencePage(
                     valueSteps = (TINT_FACTOR_RANGE.last - TINT_FACTOR_RANGE.first) / 5 - 1,
                     valueText = { "${it.toInt()}%" },
                     live = true,
+                    icon = { MaterialSymbol.Outlined(icon = "imagesearch_roller") },
                 )
             }
         }
 
-        preferenceCategory(key = "theme_shapes_text_category", title = "Shapes and text")
-        preferenceCardGroup(key = "theme_shapes_text_group") {
-            card {
-                ThemeSlider(
-                    title = "Corner radius",
-                    value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),
-                    onValueChange = { onValuesChange(values.copy(cornerRadiusDp = it.toInt())) },
-                    valueRange = 0f..32f,
-                    // 2 dp steps over 0..32 = 16 segments, so 15 intermediate stops.
-                    valueSteps = (32 - 0) / 2 - 1,
-                    valueText = { "${it.toInt()} dp" },
-                    live = true,
-                )
-            }
-            card {
-                ThemeSlider(
-                    title = "Text size",
-                    value = (values.fontSizePercent ?: 100).toFloat(),
-                    onValueChange = { onValuesChange(values.copy(fontSizePercent = it.toInt())) },
-                    valueRange = 80f..140f,
-                    // 5% steps over 80..140 = 12 segments, so 11 intermediate stops.
-                    valueSteps = (140 - 80) / 5 - 1,
-                    valueText = { "${it.toInt()}%" },
-                    live = true,
-                )
-            }
+        preferenceCategory(key = "theme_text_category", title = "Texts")
+        preferenceCardGroup(key = "theme_text_group") {
             card {
                 ListPreference(
                     value = values.fontFamily ?: SampleThemeValues.DEFAULT_FONT,
@@ -130,8 +115,39 @@ fun themePreferencePage(
                     values = SampleThemeValues.FONT_FAMILIES,
                     title = "Font",
                     summary = fontLabel(values.fontFamily),
+                    icon = { Icon(imageVector = Icons.Outlined.TextFields, contentDescription = null) },
                     type = ListPreferenceType.DROPDOWN_MENU,
                     valueToText = { AnnotatedString(fontLabel(it)) },
+                )
+            }
+            card {
+                ThemeSlider(
+                    title = "Size",
+                    value = (values.fontSizePercent ?: 100).toFloat(),
+                    onValueChange = { onValuesChange(values.copy(fontSizePercent = it.toInt())) },
+                    valueRange = 80f..140f,
+                    // 5% steps over 80..140 = 12 segments, so 11 intermediate stops.
+                    valueSteps = (140 - 80) / 5 - 1,
+                    valueText = { "${it.toInt()}%" },
+                    live = true,
+                    icon = { MaterialSymbol.Outlined(icon = "format_size") },
+                )
+            }
+        }
+
+        preferenceCategory(key = "theme_shapes_category", title = "Shapes")
+        preferenceCardGroup(key = "theme_shapes_group") {
+            card {
+                ThemeSlider(
+                    title = "Corner",
+                    value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),
+                    onValueChange = { onValuesChange(values.copy(cornerRadiusDp = it.toInt())) },
+                    valueRange = 0f..32f,
+                    // 2 dp steps over 0..32 = 16 segments, so 15 intermediate stops.
+                    valueSteps = (32 - 0) / 2 - 1,
+                    valueText = { "${it.toInt()} dp" },
+                    live = true,
+                    icon = { MaterialSymbol.Outlined(icon = "rounded_corner") },
                 )
             }
         }
@@ -150,6 +166,7 @@ private fun ThemeSlider(
     valueSteps: Int,
     valueText: (Float) -> String,
     live: Boolean = false,
+    icon: @Composable (() -> Unit)? = null,
 ) {
     // The drag position is its own stable state (not keyed on [value]); keying it on [value]
     // would re-init it on every commit, which — with a live slider that commits while dragging —
@@ -169,6 +186,7 @@ private fun ThemeSlider(
         valueRange = valueRange,
         valueSteps = valueSteps,
         valueText = valueText,
+        icon = icon,
     )
 }
 
@@ -183,6 +201,7 @@ private fun AccentList(
     values: List<AccentColor>,
     title: String,
     summary: String,
+    icon: @Composable (() -> Unit)? = null,
 ) {
     ListPreference(
         value = value,
@@ -190,6 +209,7 @@ private fun AccentList(
         values = values.map { it.hex ?: "" },
         title = title,
         summary = summary,
+        icon = icon,
         valueToText = { AnnotatedString(accentNameOf(it.ifEmpty { null })) },
         item = { accentHex, currentValue, onClick ->
             val selected = accentHex == currentValue

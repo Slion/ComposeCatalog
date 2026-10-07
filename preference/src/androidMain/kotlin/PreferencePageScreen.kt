@@ -675,6 +675,7 @@ private fun PreferencePageRow(
     Preference(
         title = page.title,
         summary = page.summary,
+        icon = page.icon,
         actionIcon = {
             Icon(
                 imageVector = Icons.Filled.ChevronRight,

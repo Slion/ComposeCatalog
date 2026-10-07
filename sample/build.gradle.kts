@@ -96,6 +96,9 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.preview)
+                // Google Material Symbols (variable-font based) — provides icons the deprecated
+                // material-icons-extended set no longer has, e.g. "colors".
+                implementation("dev.vicart:compose-material-symbols:1.1.6")
             }
         }
         commonTest { dependencies { implementation(libs.kotlin.test) } }

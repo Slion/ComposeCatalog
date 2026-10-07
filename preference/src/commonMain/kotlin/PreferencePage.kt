@@ -17,6 +17,7 @@
 package net.slions.compose.preference
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.runtime.Composable
 
 /**
  * A settings page: an id, a title, and its preferences.
@@ -28,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyListScope
  * navigation destination.
  * @property title Title of the page, shown in the list pane and in the detail top bar.
  * @property summary Optional summary shown below the title in the list pane.
+ * @property icon Optional leading icon, shown to the left of the title in the list pane.
  * @property content The preferences of the page. This runs in the detail pane's lazy list
  * scope, so it cannot read the composition directly: capture any theme values (e.g.
  * `MaterialTheme.colorScheme`) in an enclosing `@Composable` scope before building the page.
@@ -36,6 +38,7 @@ public data class PreferencePage(
     public val id: String,
     public val title: String,
     public val summary: String? = null,
+    public val icon: @Composable (() -> Unit)? = null,
     public val content: LazyListScope.() -> Unit,
 )
 
