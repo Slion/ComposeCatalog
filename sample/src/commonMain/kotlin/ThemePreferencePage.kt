@@ -23,16 +23,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Contrast
@@ -45,6 +56,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import net.slions.compose.preference.ListPreference
+import net.slions.compose.preference.Preference
 import net.slions.compose.preference.PreferencePage
 import net.slions.compose.preference.SliderPreference
 import net.slions.compose.preference.preferenceCardGroup
@@ -195,6 +207,7 @@ private fun ThemeSlider(
  * platform default (dynamic colors).
  */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun AccentList(
     value: String,
     onValueChange: (String) -> Unit,
@@ -203,56 +216,89 @@ private fun AccentList(
     summary: String,
     icon: @Composable (() -> Unit)? = null,
 ) {
-    ListPreference(
-        value = value,
-        onValueChange = onValueChange,
-        values = values.map { it.hex ?: "" },
+    var openSelector by rememberSaveable { mutableStateOf(false) }
+    val swatchColor = if (value.isEmpty()) MaterialTheme.colorScheme.surfaceVariant
+        else parseHexColor(value)
+
+    if (openSelector) {
+        BasicAlertDialog(onDismissRequest = { openSelector = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AlertDialogDefaults.shape,
+                color = AlertDialogDefaults.containerColor,
+                tonalElevation = AlertDialogDefaults.TonalElevation,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = AlertDialogDefaults.titleContentColor,
+                        modifier = Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 8.dp),
+                    )
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                        items(values) { accent ->
+                            val accentHex = accent.hex ?: ""
+                            val selected = accentHex == value
+                            val accentColor = if (accentHex.isEmpty()) MaterialTheme.colorScheme.primary
+                                else parseHexColor(accentHex)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected, true, Role.RadioButton,
+                                        onClick = { onValueChange(accentHex); openSelector = false },
+                                    )
+                                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(
+                                    selected = selected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = accentColor),
+                                )
+                                Spacer(modifier = Modifier.width(24.dp))
+                                Text(
+                                    text = accent.name,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(
+                                            if (accentHex.isEmpty()) MaterialTheme.colorScheme.surfaceVariant
+                                                else accentColor,
+                                            shape = RoundedCornerShape(8.dp),
+                                        ),
+                                )
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = { openSelector = false },
+                        modifier = Modifier.align(Alignment.End).padding(end = 16.dp, bottom = 16.dp),
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+    }
+
+    Preference(
         title = title,
         summary = summary,
         icon = icon,
-        valueToText = { AnnotatedString(accentNameOf(it.ifEmpty { null })) },
-        item = { accentHex, currentValue, onClick ->
-            val selected = accentHex == currentValue
-            // The swatch color is also used to tint the radio button, so each row reads
-            // "this color" — matching the Mode dialog's selectable row (background highlight).
-            val accentColor =
-                if (accentHex.isEmpty()) MaterialTheme.colorScheme.primary
-                else parseHexColor(accentHex)
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .selectable(selected, true, Role.RadioButton, onClick = onClick)
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(
-                    selected = selected,
-                    onClick = null,
-                    colors = RadioButtonDefaults.colors(selectedColor = accentColor),
-                )
-                Spacer(modifier = Modifier.width(24.dp))
-                Text(
-                    text = accentNameOf(accentHex.ifEmpty { null }),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier =
-                        Modifier
-                            .size(24.dp)
-                            .background(
-                                if (accentHex.isEmpty()) {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                } else {
-                                    accentColor
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                            ),
-                )
-            }
+        widgetContainer = {
+            Box(
+                modifier = Modifier
+                    .padding(end = 24.dp)
+                    .size(24.dp)
+                    .background(swatchColor, shape = RoundedCornerShape(8.dp)),
+            )
         },
+        onClick = { openSelector = true },
     )
 }
 
