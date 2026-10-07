@@ -75,7 +75,7 @@ fun themePreferencePage(
     PreferencePage(
         id = "theme",
         title = "Theme",
-        summary = "Mode, colors, and text. Settings are persisted.",
+        summary = "Contrast, colors, and text. Settings are persisted.",
         icon = { MaterialSymbol.Outlined(icon = "palette") },
     ) {
         preferenceCategory(key = "theme_colors_category", title = "Colors")
@@ -85,7 +85,7 @@ fun themePreferencePage(
                     value = values.themeMode,
                     onValueChange = { onValuesChange(values.copy(themeMode = it)) },
                     values = SampleThemeMode.entries,
-                    title = "Mode",
+                    title = "Contrast",
                     summary = values.themeMode.label,
                     icon = { Icon(imageVector = Icons.Outlined.Contrast, contentDescription = null) },
                     valueToText = { AnnotatedString(it.label) },
