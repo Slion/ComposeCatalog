@@ -68,6 +68,7 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -95,6 +96,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
@@ -106,6 +108,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+
+/** Log tag for the fold/resize transition tracing (enable with logcat -s PrefPageFold). */
+private const val LOG_TAG = "PrefPageFold"
 
 /**
  * The adaptive two-pane settings screen: a list pane of [pages] with a search field, and a
@@ -146,7 +151,62 @@ public fun PreferencePageScreen(
     adaptiveInfo: WindowAdaptiveInfo? = null,
     singlePaneOnly: Boolean = false,
 ) {
-    val windowAdaptiveInfo = adaptiveInfo ?: currentWindowAdaptiveInfoV2()
+    val density = LocalDensity.current
+    // Both LocalWindowInfo.current.containerSize, currentWindowAdaptiveInfoV2(), and
+    // Compose's onSizeChanged lag behind a non-recreating resize on foldables (e.g.
+    // spreading the app across both Surface Duo screens): the actual window is already at
+    // the new size, but the composition locals haven't caught up yet. The one source
+    // proven to be current on every frame is the Android view itself: poll the root view's
+    // size on the frame clock and feed that into the size class below.
+    val rootView = LocalView.current
+    var measuredSize by remember { mutableStateOf(IntSize.Zero) }
+    DisposableEffect(rootView) {
+        // One Choreographer frame callback per frame; the view's width/height are
+        // updated during layout, so this reads the size as of the last frame.
+        @Suppress("DEPRECATION") // main-thread Choreographer, same instance Compose uses
+        val choreographer = android.view.Choreographer.getInstance()
+        val frameCallback =
+            object : android.view.Choreographer.FrameCallback {
+                override fun doFrame(frameTimeNanos: Long) {
+                    val size = IntSize(rootView.width, rootView.height)
+                    if (size.width > 0 && size.height > 0 && size != measuredSize) {
+                        measuredSize = size
+                        Timber.d("$LOG_TAG: SIZE view=${size.width}x${size.height}px")
+                    }
+                    choreographer.postFrameCallback(this)
+                }
+            }
+        choreographer.postFrameCallback(frameCallback)
+        onDispose { choreographer.removeFrameCallback(frameCallback) }
+    }
+    // Fallback for the very first frame before the poll has run.
+    val containerSize = LocalWindowInfo.current.containerSize
+    val effectiveSize = if (measuredSize != IntSize.Zero) measuredSize else containerSize
+    // currentWindowAdaptiveInfoV2() provides the window posture (hinges), which we still
+    // need. The size class is re-derived from the measured size above.
+    val baseInfo = adaptiveInfo ?: currentWindowAdaptiveInfoV2()
+    val windowAdaptiveInfo =
+        remember(baseInfo, adaptiveInfo, effectiveSize, density) {
+            if (adaptiveInfo != null) {
+                baseInfo
+            } else {
+                // Build the size class the same way currentWindowAdaptiveInfoV2() does:
+                // quantize the current dp size to the standard breakpoints (width to
+                // 0/600/840, height to 0/480/900). The scaffold directive matches these
+                // exact breakpoint values (it does `when (minWidthDp.dp) { 0.dp -> …;
+                // 600.dp -> …; 840.dp -> … }`), so a raw, non-breakpoint dp such as 537
+                // would not classify and would fall through to the default (three panes).
+                val widthDp = with(density) { effectiveSize.width.toDp().value }
+                val heightDp = with(density) { effectiveSize.height.toDp().value }
+                WindowAdaptiveInfo(
+                    // `compute` is deprecated in favour of `computeWindowSizeClass`, which is
+                    // not resolvable against the window-core version this project compiles
+                    // against, so the deprecated overload is used.
+                    windowSizeClass = WindowSizeClass.Companion.compute(widthDp, heightDp),
+                    windowPosture = baseInfo.windowPosture,
+                )
+            }
+        }
     // calculatePaneScaffoldDirective only goes two-pane at the "Expanded" width class
     // (>= 720dp). Unfolded foldables sit right on that boundary (e.g. 719dp -> "Medium"),
     // so the default directive keeps them single-pane in both portrait and landscape.
@@ -173,14 +233,12 @@ public fun PreferencePageScreen(
     // Fold-debug logging: record the actual measured pane widths so we can compare the
     // scaffold's input (window size + fold posture) against what it produced on each
     // fold transition. Filter logcat by "PrefPageFold".
-    val logTag = "PrefPageFold"
     var listPaneSize by remember { mutableStateOf(IntSize.Zero) }
     var detailPaneSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val containerSize = LocalWindowInfo.current.containerSize
-    LaunchedEffect(containerSize, windowAdaptiveInfo, isTwoPane) {
+    LaunchedEffect(effectiveSize, windowAdaptiveInfo, isTwoPane) {
         Timber.d(
-            "$logTag: IN  window=${containerSize.width}x${containerSize.height}px " +
+            "$LOG_TAG: IN  window=${effectiveSize.width}x${effectiveSize.height}px " +
                 "wsc=${windowAdaptiveInfo.windowSizeClass} " +
                 "posture=${windowAdaptiveInfo.windowPosture} " +
                 "maxParts=${directive.maxHorizontalPartitions} twoPane=$isTwoPane"
@@ -189,7 +247,7 @@ public fun PreferencePageScreen(
     LaunchedEffect(listPaneSize, detailPaneSize) {
         if (listPaneSize != IntSize.Zero || detailPaneSize != IntSize.Zero) {
             Timber.d(
-                "$logTag: OUT listPx=${listPaneSize.width} detailPx=${detailPaneSize.width} " +
+                "$LOG_TAG: OUT listPx=${listPaneSize.width} detailPx=${detailPaneSize.width} " +
                     "sum=${listPaneSize.width + detailPaneSize.width}"
             )
         }
@@ -526,13 +584,17 @@ public fun PreferencePageScreen(
                 directive = navigator.scaffoldDirective,
                 scaffoldState = navigator.scaffoldState,
                 listPane = {
-                    AnimatedPane {
-                        // Keep the list pane at exactly half the window so both halves stay
-                        // equal in portrait regardless of fold angle; the detail pane
-                        // (higher priority) absorbs the remaining width.
+                    // The scaffold only reads preferredWidth from the parentData of the
+                    // pane's root node (the AnimatedPane); on an inner Box it is ignored
+                    // and the pane falls back to the directive's 360dp default, letting
+                    // the higher-priority detail pane absorb all the leftover width.
+                    AnimatedPane(
+                        Modifier
+                            .preferredWidth(0.5f)
+                            .fillMaxSize(),
+                    ) {
                         Box(
                             Modifier
-                                .preferredWidth(0.5f)
                                 .fillMaxSize()
                                 .onSizeChanged { listPaneSize = it }
                                 .then(trackPaneFocus(ActivePane.List)),
@@ -821,19 +883,22 @@ public fun PreferencePageScreen(
                     }
                 },
                 detailPane = {
-                    AnimatedPane {
+                    // Mirror the list pane's 0.5f proportion on the AnimatedPane (the
+                    // pane root) so both halves sum to the full width and the scaffold
+                    // never has to scale them unequally (keeps the split 50/50 at any
+                    // fold angle).
+                    AnimatedPane(
+                        Modifier
+                            .preferredWidth(0.5f)
+                            .fillMaxSize(),
+                    ) {
                         val page = currentPage
                         if (page != null) {
                             CompositionLocalProvider(
                                 LocalHighlightedPreferenceKey provides highlightedKey,
                             ) {
-                                // Mirror the list pane's 0.5f proportion so both halves
-                                // always sum to the full width and the scaffold never
-                                // has to scale them unequally (keeps the split 50/50 at
-                                // any fold angle).
                                 Box(
                                     Modifier
-                                        .preferredWidth(0.5f)
                                         .fillMaxSize()
                                         .onSizeChanged { detailPaneSize = it }
                                         .then(trackPaneFocus(ActivePane.Detail)),

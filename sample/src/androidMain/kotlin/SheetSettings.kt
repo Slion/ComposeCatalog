@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import net.slions.compose.preference.PreferencePage
@@ -49,6 +51,14 @@ import net.slions.compose.preference.ProvidePreferenceLocals
 import net.slions.compose.preference.ProvidePreferenceTheme
 import net.slions.compose.preference.preference
 import net.slions.compose.preference.windowAdaptiveInfoFor
+
+/**
+ * The default maximum width of the in-activity bottom sheet: on wide windows (an unfolded
+ * foldable) the sheet is centered at this width with a visible scrim on either side instead
+ * of stretching edge to edge. 480dp keeps the single-pane content comfortably readable
+ * without dominating the window.
+ */
+private val DEFAULT_MAX_SHEET_WIDTH: Dp = 480.dp
 
 /**
  * A root-level page row (shown in the settings list) that opens the settings tree inside a
@@ -80,13 +90,19 @@ fun sheetSettingsPage(onOpenSheet: () -> Unit): PreferencePage =
  * the sheet never resets or forks the theme.
  *
  * @param onDismiss Closes the sheet (scrim tap, or system back at the root).
+ * @param maxWidth The sheet's maximum width; on wide windows (an unfolded foldable) the
+ * sheet is centered at this width instead of stretching edge to edge. On a narrower
+ * container it fills the width as usual. Defaults to [DEFAULT_MAX_SHEET_WIDTH].
  */
 @Composable
-fun SheetSettings(onDismiss: () -> Unit) {
+fun SheetSettings(
+    onDismiss: () -> Unit,
+    maxWidth: Dp = DEFAULT_MAX_SHEET_WIDTH,
+) {
     ProvidePreferenceLocals {
         val (themeValues, writeThemeValues) = rememberSampleThemeValues()
         ProvidePreferenceTheme {
-            DraggableBottomSheet(onDismiss) { size ->
+            DraggableBottomSheet(onDismiss, maxWidth) { size ->
                 SheetSettingsScreen(
                     pages = samplePages(themeValues, writeThemeValues),
                     hostSize = size,
@@ -100,13 +116,15 @@ fun SheetSettings(onDismiss: () -> Unit) {
 /**
  * A simple, self-contained bottom sheet: a rounded panel anchored to the bottom of its
  * container, over a scrim (tapping the scrim dismisses), that the user drags to change its
- * expand fraction (0.4 = peeked, 1 = full height of the container). It reports the
- * content's measured [IntSize] to [content] so the hosted content can adapt to the sheet's
- * current size.
+ * expand fraction (0.4 = peeked, 1 = full height of the container). Its width is at most
+ * [maxWidth] (centered over the scrim on wider containers). It reports the content's
+ * measured [IntSize] to [content] so the hosted content can adapt to the sheet's current
+ * size.
  */
 @Composable
 private fun DraggableBottomSheet(
     onDismiss: () -> Unit,
+    maxWidth: Dp = DEFAULT_MAX_SHEET_WIDTH,
     content: @Composable (IntSize) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -126,6 +144,9 @@ private fun DraggableBottomSheet(
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
+                // Clamp to maxWidth, then fill: edge to edge on a narrow container, centered
+                // at maxWidth on a wide one.
+                .widthIn(max = maxWidth)
                 .fillMaxWidth()
                 .height(sheetHeight)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
