@@ -108,10 +108,10 @@ fun preferenceRowPage(): PreferencePage {
             preference(title = "Card row 3", summary = "Last row.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group row 1", summary = "Each card group item is its own card.") {
                 Preference(title = "Card group row 1", summary = "Each card group item is its own card.")
             }
-            card {
+            card(title = "Card group row 2") {
                 Preference(
                     title = "Card group row 2",
                     actionIcon = {

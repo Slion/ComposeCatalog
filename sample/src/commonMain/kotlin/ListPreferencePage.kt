@@ -119,7 +119,7 @@ fun listPreferencePage(): PreferencePage =
             )
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group list", summary = "Alpha, Beta, Canary") {
                 val state = rememberPreferenceState("list_group_state", "Canary")
                 val value by state
                 ListPreference(
@@ -130,7 +130,7 @@ fun listPreferencePage(): PreferencePage =
                     summary = "Selected: $value",
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

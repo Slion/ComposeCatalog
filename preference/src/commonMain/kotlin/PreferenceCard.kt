@@ -225,16 +225,36 @@ private fun CardContent(
     }
 }
 
+/** A single item of a [PreferenceCardGroup], as built with [PreferenceCardGroupScope.card]. */
+public data class PreferenceCardItem(
+    /** The search text of the item; also the text used to index it. */
+    public val title: String,
+    /** Optional summary text of the item, used to index it. */
+    public val summary: String?,
+    /** The composable content drawn inside the item's [Card]. */
+    public val content: @Composable () -> Unit,
+)
+
 /**
  * Scope for [PreferenceCardGroup]. Use [card] to add an item; each item is rendered in its own
  * [Card].
  */
 public class PreferenceCardGroupScope {
-    internal val items = mutableListOf<@Composable () -> Unit>()
+    internal val items = mutableListOf<PreferenceCardItem>()
 
-    /** Adds an item to the group. Each item is drawn in its own [Card]. */
-    public fun card(content: @Composable () -> Unit) {
-        items.add(content)
+    /**
+     * Adds an item to the group. Each item is drawn in its own [Card].
+     *
+     * [title] and [summary] describe the item's single row for search indexing (the card's
+     * content is composable and not walked by [buildSearchIndex], so the row's own text cannot
+     * be read automatically). Pass the same title/summary the row displays.
+     */
+    public fun card(
+        title: String,
+        summary: String? = null,
+        content: @Composable () -> Unit,
+    ) {
+        items.add(PreferenceCardItem(title, summary, content))
     }
 }
 
@@ -250,7 +270,7 @@ public class PreferenceCardGroupScope {
  * @param cardColor Card background color. If null, [CardDefaults.cardColors] is used.
  * @param outerPadding Clearance between the group and its container. If null,
  * `PreferenceTheme.horizontalSpacing` is used on all sides.
- * @param content Content of the group. Use [PreferenceCardGroupScope.card] to add items.
+ * @param items The pre-built items of the group, as produced by [PreferenceCardGroupScope].
  */
 @Composable
 public fun PreferenceCardGroup(
@@ -259,10 +279,8 @@ public fun PreferenceCardGroup(
     shape: Shape? = null,
     cardColor: Color? = null,
     outerPadding: PaddingValues? = null,
-    content: @Composable PreferenceCardGroupScope.() -> Unit,
+    items: List<PreferenceCardItem>,
 ) {
-    val scope = PreferenceCardGroupScope()
-    scope.content()
     val cardShape = shape ?: MaterialTheme.shapes.medium
     val cornerSize =
         (cardShape as? RoundedCornerShape ?: RoundedCornerShape(12.dp)).topStart
@@ -271,14 +289,14 @@ public fun PreferenceCardGroup(
     val colors =
         cardColor?.let { CardDefaults.cardColors(containerColor = it) }
             ?: CardDefaults.cardColors()
-    val last = scope.items.size - 1
+    val last = items.size - 1
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(outer),
         verticalArrangement = Arrangement.spacedBy(itemSpacing),
     ) {
-        scope.items.forEachIndexed { index, item ->
+        items.forEachIndexed { index, card ->
             val itemShape =
                 when {
                     last <= 0 -> cardShape
@@ -291,7 +309,7 @@ public fun PreferenceCardGroup(
                 shape = itemShape,
                 colors = colors,
             ) {
-                item()
+                card.content()
             }
         }
     }
@@ -308,7 +326,9 @@ public fun PreferenceCardGroup(
  * @param cardColor Card background color. If null, [CardDefaults.cardColors] is used.
  * @param outerPadding Clearance between the group and its container. If null,
  * `PreferenceTheme.horizontalSpacing` is used on all sides.
- * @param content Content of the group. Use [PreferenceCardGroupScope.card] to add items.
+ * @param content Content of the group. Use [PreferenceCardGroupScope.card] to add items. The
+ * content is built eagerly (not composed) so that [buildSearchIndex] can read each card's
+ * title/summary and index the group's rows.
  */
 public fun LazyListScope.preferenceCardGroup(
     key: String? = null,
@@ -317,29 +337,34 @@ public fun LazyListScope.preferenceCardGroup(
     shape: Shape? = null,
     cardColor: Color? = null,
     outerPadding: PaddingValues? = null,
-    content: @Composable PreferenceCardGroupScope.() -> Unit,
+    content: PreferenceCardGroupScope.() -> Unit,
 ) {
-    if (key != null) {
-        item(key = key, contentType = "PreferenceCardGroup") {
-            PreferenceCardGroup(
-                modifier = modifier.then(highlightedKeyModifier(key)),
-                itemSpacing = itemSpacing,
-                shape = shape,
-                cardColor = cardColor,
-                outerPadding = outerPadding,
-                content = content,
-            )
+    // Runs the content (a plain data builder, not composable) before registering the item, so
+    // the group's cards are recorded with the index of the group's single lazy list item. A
+    // stable key is always used (a generated one when the caller passes none) so a search
+    // result in the group can be highlighted.
+    val scope = PreferenceCardGroupScope()
+    scope.content()
+    val groupKey = key ?: "cardgroup:${SearchIndexer.itemCount()}"
+    val groupIndex = SearchIndexer.itemCount()
+    val fixes =
+        scope.items.mapIndexedNotNull { index, card ->
+            SearchIndexer.record(
+                    key = groupKey,
+                    title = card.title,
+                    summary = card.summary,
+                )
+                ?.let { it to groupIndex }
         }
-    } else {
-        item(contentType = "PreferenceCardGroup") {
-            PreferenceCardGroup(
-                modifier = modifier,
-                itemSpacing = itemSpacing,
-                shape = shape,
-                cardColor = cardColor,
-                outerPadding = outerPadding,
-                content = content,
-            )
-        }
+    SearchIndexer.setIndices(fixes.toMap())
+    item(key = groupKey, contentType = "PreferenceCardGroup") {
+        PreferenceCardGroup(
+            modifier = modifier.then(highlightedKeyModifier(groupKey)),
+            itemSpacing = itemSpacing,
+            shape = shape,
+            cardColor = cardColor,
+            outerPadding = outerPadding,
+            items = scope.items,
+        )
     }
 }

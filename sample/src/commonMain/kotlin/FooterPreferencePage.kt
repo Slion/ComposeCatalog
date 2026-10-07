@@ -64,10 +64,10 @@ fun footerPreferencePage(): PreferencePage =
             preference(title = "Card footer", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Footer", summary = "A footer row inside a card group.") {
                 FooterPreference(summary = "A footer row inside a card group.")
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

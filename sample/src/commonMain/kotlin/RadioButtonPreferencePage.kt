@@ -86,7 +86,7 @@ fun radioButtonPreferencePage(): PreferencePage {
             )
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group option 1", summary = "Selected option.") {
                 RadioButtonPreference(
                     selected = selected3 == "c",
                     title = "Card group option 1",
@@ -94,7 +94,7 @@ fun radioButtonPreferencePage(): PreferencePage {
                     onClick = { group3.value = "c" },
                 )
             }
-            card {
+            card(title = "Card group option 2", summary = "Unselected option.") {
                 RadioButtonPreference(
                     selected = selected3 == "d",
                     title = "Card group option 2",

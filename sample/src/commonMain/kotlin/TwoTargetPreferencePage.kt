@@ -116,10 +116,10 @@ fun twoTargetPreferencePage(): PreferencePage =
             preference(title = "Card two target", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group two target", summary = "A two-target row inside a card group.") {
                 TwoTargetRowSample()
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

@@ -95,7 +95,7 @@ fun twoTargetIconButtonPreferencePage(): PreferencePage =
             preference(title = "Card icon button", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group icon button", summary = "A two-target row inside a card group.") {
                 net.slions.compose.preference.TwoTargetIconButtonPreference(
                     title = "Card group icon button",
                     summary = "A two-target row inside a card group.",
@@ -108,7 +108,7 @@ fun twoTargetIconButtonPreferencePage(): PreferencePage =
                     onIconButtonClick = {},
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

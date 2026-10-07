@@ -103,7 +103,7 @@ fun twoTargetSwitchPreferencePage(): PreferencePage =
             preference(title = "Card two-target switch", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group two-target switch", summary = "On/Off") {
                 val state = rememberPreferenceState("tts_group_state", false)
                 val value by state
                 TwoTargetSwitchPreference(
@@ -114,7 +114,7 @@ fun twoTargetSwitchPreferencePage(): PreferencePage =
                     onClick = { },
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

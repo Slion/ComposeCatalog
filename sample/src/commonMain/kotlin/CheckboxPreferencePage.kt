@@ -113,7 +113,7 @@ fun checkboxPreferencePage(): PreferencePage =
             preference(title = "Card checkbox", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group checkbox", summary = "A stateful row inside a card group.") {
                 val state = rememberPreferenceState("cb_group_state", true)
                 val value by state
                 CheckboxPreference(
@@ -123,7 +123,7 @@ fun checkboxPreferencePage(): PreferencePage =
                     summary = "A stateful row inside a card group.",
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

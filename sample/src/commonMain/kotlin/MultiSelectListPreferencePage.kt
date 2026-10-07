@@ -106,7 +106,7 @@ fun multiSelectListPreferencePage(): PreferencePage =
             preference(title = "Card multi-select", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group multi-select", summary = "Alpha, Beta, Canary") {
                 val state = rememberPreferenceState("msl_group_state", setOf<String>("Alpha"))
                 val value by state
                 MultiSelectListPreference(
@@ -117,7 +117,7 @@ fun multiSelectListPreferencePage(): PreferencePage =
                     summary = value.sorted().joinToString(", ").ifEmpty { "None selected" },
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

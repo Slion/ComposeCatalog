@@ -552,17 +552,23 @@ public fun PreferencePageScreen(
                                         // The page rows are each drawn in their own card,
                                         // with the first and last showing rounded
                                         // top/bottom corners.
-                                        PreferenceCardGroup {
-                                            pages.forEach { page ->
-                                                card {
-                                                    PreferencePageRow(
-                                                        page = page,
-                                                        selected = page.id == selectedPageId,
-                                                        onClick = { selectPage(page.id) },
+                                        PreferenceCardGroup(
+                                            items = pages.map {
+                                                page ->
+                                                    PreferenceCardItem(
+                                                        title = page.title,
+                                                        summary = page.summary,
+                                                        content = {
+                                                            PreferencePageRow(
+                                                                page = page,
+                                                                selected =
+                                                                    page.id == selectedPageId,
+                                                                onClick = { selectPage(page.id) },
+                                                            )
+                                                        },
                                                     )
-                                                }
-                                            }
-                                        }
+                                                },
+                                        )
                                     }
                                 }
                             }

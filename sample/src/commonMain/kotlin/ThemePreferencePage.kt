@@ -55,7 +55,7 @@ fun themePreferencePage(
     ) {
         preferenceCategory(key = "theme_colors_category", title = "Colors")
         preferenceCardGroup(key = "theme_colors_group") {
-            card {
+            card(title = "Contrast", summary = values.themeMode.label) {
                 ListPreference(
                     value = values.themeMode,
                     onValueChange = { onValuesChange(values.copy(themeMode = it)) },
@@ -66,7 +66,7 @@ fun themePreferencePage(
                     valueToText = { AnnotatedString(it.label) },
                 )
             }
-            card {
+            card(title = "Color", summary = accentNameOf(values.accent)) {
                 ColorPreference(
                     value = values.accent ?: "",
                     onValueChange = { onValuesChange(values.copy(accent = it.ifEmpty { null })) },
@@ -77,7 +77,7 @@ fun themePreferencePage(
                     defaultOptionColor = defaultAccent,
                 )
             }
-            card {
+            card(title = "Tint") {
                 LiveSliderPreference(
                     title = "Tint",
                     value = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT).toFloat(),
@@ -95,7 +95,7 @@ fun themePreferencePage(
 
         preferenceCategory(key = "theme_text_category", title = "Texts")
         preferenceCardGroup(key = "theme_text_group") {
-            card {
+            card(title = "Font", summary = fontLabel(values.fontFamily)) {
                 ListPreference(
                     value = values.fontFamily ?: SampleThemeValues.DEFAULT_FONT,
                     onValueChange = { onValuesChange(values.copy(fontFamily = it)) },
@@ -106,7 +106,7 @@ fun themePreferencePage(
                     valueToText = { AnnotatedString(fontLabel(it)) },
                 )
             }
-            card {
+            card(title = "Size") {
                 LiveSliderPreference(
                     title = "Size",
                     value = (values.fontSizePercent ?: 100).toFloat(),
@@ -123,7 +123,7 @@ fun themePreferencePage(
 
         preferenceCategory(key = "theme_shapes_category", title = "Shapes")
         preferenceCardGroup(key = "theme_shapes_group") {
-            card {
+            card(title = "Corner") {
                 LiveSliderPreference(
                     title = "Corner",
                     value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),

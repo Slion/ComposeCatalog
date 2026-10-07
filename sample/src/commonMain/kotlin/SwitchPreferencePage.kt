@@ -98,7 +98,7 @@ fun switchPreferencePage(): PreferencePage =
             preference(title = "Card switch", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group switch", summary = "A stateful row inside a card group.") {
                 val state = rememberPreferenceState("sw_group_state", true)
                 val value by state
                 SwitchPreference(
@@ -108,7 +108,7 @@ fun switchPreferencePage(): PreferencePage =
                     summary = "A stateful row inside a card group.",
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

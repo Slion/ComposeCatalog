@@ -135,7 +135,7 @@ fun sliderPreferencePage(): PreferencePage {
             )
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group slider") {
                 val state = rememberPreferenceState<Float>("slider_group_state", 2f)
                 val value by state
                 val sliderState = remember { mutableFloatStateOf(value) }
@@ -151,7 +151,7 @@ fun sliderPreferencePage(): PreferencePage {
                     valueText = { it.roundToInt().toString() },
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

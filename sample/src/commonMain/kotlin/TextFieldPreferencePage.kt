@@ -120,7 +120,7 @@ fun textFieldPreferencePage(): PreferencePage =
             preference(title = "Card text field", summary = "Static row inside a real card.")
         }
         preferenceCardGroup {
-            card {
+            card(title = "Card group text field") {
                 val state = rememberPreferenceState("tf_group_state", "Group")
                 val value by state
                 TextFieldPreference(
@@ -131,7 +131,7 @@ fun textFieldPreferencePage(): PreferencePage =
                     summary = "Value: $value",
                 )
             }
-            card {
+            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.preference.Preference(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
