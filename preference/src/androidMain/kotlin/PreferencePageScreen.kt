@@ -59,7 +59,7 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldDefaults
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.MutableThreePaneScaffoldState
-import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -122,8 +122,15 @@ public fun PreferencePageScreen(
     onBack: () -> Unit = {},
 ) {
     val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
+    // calculatePaneScaffoldDirective only goes two-pane at the "Expanded" width class
+    // (>= 720dp). Unfolded foldables sit right on that boundary (e.g. 719dp -> "Medium"),
+    // so the default directive keeps them single-pane in both portrait and landscape.
+    // A settings list of short page titles is comfortably usable in a medium-width window,
+    // so use the "two panes on medium width" variant to activate the detail pane there too.
     val directive =
-        remember(windowAdaptiveInfo) { calculatePaneScaffoldDirective(windowAdaptiveInfo) }
+        remember(windowAdaptiveInfo) {
+            calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(windowAdaptiveInfo)
+        }
     val isTwoPane = directive.maxHorizontalPartitions >= 2
     val navigator =
         rememberListDetailPaneScaffoldNavigator<String>(
