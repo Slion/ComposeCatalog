@@ -477,8 +477,11 @@ public fun PreferencePageScreen(
     // Keep the list pane showing the page currently open in the detail: when the row set
     // changes (popping up the tree in two-pane, opening a page from a search result), the
     // pane's scroll offset would otherwise be left stale — e.g. scrolled past the end of a
-    // new, shorter list, with the selected row out of view.
-    LaunchedEffect(selectedPageId, listRows, isSearching) {
+    // new, shorter list, with the selected row out of view. Keyed on the row set only (not
+    // on selectedPageId): tapping a row does not swap the set (at the root level the rows
+    // stay the top-level pages), so a tap must not re-scroll the list to the tapped row —
+    // only a navigation that changes the level does.
+    LaunchedEffect(listRows, isSearching) {
         if (isSearching) return@LaunchedEffect
         val sel = selectedPageId ?: return@LaunchedEffect
         // Item 0 is the search pill; the page rows follow from index 1.
