@@ -183,9 +183,11 @@ private fun ThemeSlider(
             if (live) onValueChange(it)
         },
         title = title,
+        // Right-align the value on the title line (e.g. "Tint        30%"); it tracks the drag
+        // state, so it updates live while dragging.
+        titlePostfix = { Text(valueText(sliderValue)) },
         valueRange = valueRange,
         valueSteps = valueSteps,
-        valueText = valueText,
         icon = icon,
     )
 }

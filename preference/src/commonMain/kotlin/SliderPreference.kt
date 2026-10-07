@@ -19,9 +19,11 @@ package net.slions.compose.preference
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ProvideTextStyle
@@ -181,6 +183,7 @@ public fun SliderPreference(
     icon: @Composable (() -> Unit)? = null,
     summary: String? = null,
     valueText: ((Float) -> String?)? = null,
+    titlePostfix: @Composable (() -> Unit)? = null,
 ) {
     var lastValue by remember { mutableFloatStateOf(value) }
     SideEffect {
@@ -207,7 +210,15 @@ public fun SliderPreference(
                         }
                 ) {
                     ProvideTextStyle(value = theme.titleTextStyle) {
-                        Text(text = title)
+                        if (titlePostfix != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = title, modifier = Modifier.weight(1f))
+                                Spacer(modifier = Modifier.width(theme.horizontalSpacing))
+                                titlePostfix()
+                            }
+                        } else {
+                            Text(text = title)
+                        }
                     }
                 }
                 if (summary != null) {
