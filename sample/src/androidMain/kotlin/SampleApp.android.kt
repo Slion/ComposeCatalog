@@ -38,7 +38,11 @@ actual fun SampleApp() {
                 ProvidePreferenceTheme {
                     PreferencePageScreen(
                         title = SampleTitle,
-                        pages = samplePages(themeValues, writeThemeValues),
+                        // The common sample pages plus a root row that opens the same tree
+                        // in a bottom sheet (Android-only, so it is added here).
+                        pages =
+                            samplePages(themeValues, writeThemeValues) +
+                                listOf(sheetSettingsPage()),
                     )
                 }
             }

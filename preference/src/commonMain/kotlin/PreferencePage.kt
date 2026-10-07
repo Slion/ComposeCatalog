@@ -33,14 +33,57 @@ import androidx.compose.runtime.Composable
  * @property content The preferences of the page. This runs in the detail pane's lazy list
  * scope, so it cannot read the composition directly: capture any theme values (e.g.
  * `MaterialTheme.colorScheme`) in an enclosing `@Composable` scope before building the page.
+ * @property subPages Optional child pages, shown as rows at the top of this page's detail.
+ * The tree can nest to any depth; page ids must be unique within the whole tree. It is
+ * declared before [content] so that existing trailing-lambda call sites (`PreferencePage(id,
+ * title) { ... }`) still bind their lambda to [content].
  */
 public data class PreferencePage(
     public val id: String,
     public val title: String,
     public val summary: String? = null,
     public val icon: @Composable (() -> Unit)? = null,
+    public val subPages: List<PreferencePage> = emptyList(),
     public val content: LazyListScope.() -> Unit,
 )
+
+/**
+ * Depth-first traversal of [pages] in declaration order, including every level of
+ * [PreferencePage.subPages].
+ */
+public fun List<PreferencePage>.walkPages(): List<PreferencePage> {
+    val all = mutableListOf<PreferencePage>()
+    fun visit(pages: List<PreferencePage>) {
+        for (page in pages) {
+            all += page
+            visit(page.subPages)
+        }
+    }
+    visit(this)
+    return all
+}
+
+/** Finds the page with [id] anywhere in the tree rooted at [pages], or null. */
+public fun findPage(pages: List<PreferencePage>, id: String): PreferencePage? =
+    pages.walkPages().firstOrNull { it.id == id }
+
+/**
+ * The chain of pages from the top level down to (and including) the page with [id], or null
+ * when no page in the tree has [id].
+ */
+public fun findPagePath(pages: List<PreferencePage>, id: String): List<PreferencePage>? {
+    val path = mutableListOf<PreferencePage>()
+    fun visit(pages: List<PreferencePage>): Boolean {
+        for (page in pages) {
+            path += page
+            if (page.id == id) return true
+            if (page.subPages.isNotEmpty() && visit(page.subPages)) return true
+            path.removeAt(path.lastIndex)
+        }
+        return false
+    }
+    return if (visit(pages)) path.toList() else null
+}
 
 /**
  * A search result: a [page] whose title/summary or [matches] (entries of the preference
@@ -52,8 +95,9 @@ public data class PageMatch(
 )
 
 /**
- * Case-insensitively searches the whole preference tree of [pages] for pages whose title,
- * summary, or any entry of [index] contains [query] (a blank query matches everything).
+ * Case-insensitively searches the whole preference tree of [pages] — including every level
+ * of [PreferencePage.subPages], in depth-first order — for pages whose title, summary, or
+ * any entry of [index] contains [query] (a blank query matches only the top-level pages).
  * The returned [PageMatch.matches] list only contains the entries that matched the query.
  *
  * @param index The search index built with [buildSearchIndex].
@@ -67,7 +111,7 @@ public fun searchPreferencePages(
     if (q.isEmpty()) {
         return pages.map { PageMatch(it, emptyList()) }
     }
-    return pages.mapNotNull { page ->
+    return pages.walkPages().mapNotNull { page ->
         val pageMatches =
             page.title.lowercase().contains(q) || page.summary?.lowercase()?.contains(q) == true
         val matchingEntries = (index[page.id] ?: emptyList()).filter {

@@ -53,6 +53,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.Posture
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
@@ -77,6 +79,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -92,9 +95,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -119,6 +124,15 @@ import timber.log.Timber
  * @param modifier Modifier applied to the root surface.
  * @param onBack Called when the host should dismiss the screen (i.e. system back while the
  * list pane is on screen in a single-pane layout).
+ * @param adaptiveInfo Adaptive layout info computed for the host of the screen instead of
+ * for the window. The screen's adaptive layout (single- vs two-pane) follows this value,
+ * which is what a host smaller than the window — e.g. a modal bottom sheet, a dialog, or a
+ * split — passes: it measures its own size and builds a [WindowAdaptiveInfo] for it (with
+ * no hinges, since the fold does not apply to the host), so the screen adapts to the host
+ * rather than to the window. Null (the default) uses the window.
+ * @param singlePaneOnly Forces the single-pane layout regardless of the (host) width, so a
+ * host that must never split into a list + detail (e.g. a bottom sheet, a dialog) stays
+ * single-pane even when it is wide; the list navigates to the detail and back.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -127,8 +141,10 @@ public fun PreferencePageScreen(
     pages: List<PreferencePage>,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
+    adaptiveInfo: WindowAdaptiveInfo? = null,
+    singlePaneOnly: Boolean = false,
 ) {
-    val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
+    val windowAdaptiveInfo = adaptiveInfo ?: currentWindowAdaptiveInfoV2()
     // calculatePaneScaffoldDirective only goes two-pane at the "Expanded" width class
     // (>= 720dp). Unfolded foldables sit right on that boundary (e.g. 719dp -> "Medium"),
     // so the default directive keeps them single-pane in both portrait and landscape.
@@ -140,11 +156,15 @@ public fun PreferencePageScreen(
     // pane divider onto the crease and the list pane grows past 50%. With NeverAvoid the
     // two preferredWidth(0.5f) panes stay exactly half each in every fold state.
     val directive =
-        remember(windowAdaptiveInfo) {
-            calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(
-                windowAdaptiveInfo = windowAdaptiveInfo,
-                verticalHingePolicy = HingePolicy.NeverAvoid,
-            )
+        remember(windowAdaptiveInfo, singlePaneOnly) {
+            val base =
+                calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(
+                    windowAdaptiveInfo = windowAdaptiveInfo,
+                    verticalHingePolicy = HingePolicy.NeverAvoid,
+                )
+            // A host that must never split (a bottom sheet, a dialog) forces a single
+            // partition so the screen stays single-pane at any width.
+            if (singlePaneOnly) base.copy(maxHorizontalPartitions = 1) else base
         }
     val isTwoPane = directive.maxHorizontalPartitions >= 2
 
@@ -212,6 +232,26 @@ public fun PreferencePageScreen(
         } else {
             null
         }
+    // The navigation trail within the page tree: the chain of page ids from the top level
+    // down to the page currently shown in the detail pane (empty = none selected). The
+    // detail shows the deepest page; the list pane shows the rows of its parent (the
+    // top-level pages while at the root). Tapping a sub-page row pushes its id, tapping a
+    // breadcrumb segment (or back) pops to that ancestor.
+    var pagePath by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    fun pathOf(pageId: String): List<String> =
+        findPagePath(pages, pageId)?.map { it.id } ?: listOf(pageId)
+    fun selectPageById(pageId: String) {
+        pagePath = pathOf(pageId)
+        scope.launch {
+            navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = pageId)
+        }
+    }
+    fun navigateToPath(id: List<String>) {
+        pagePath = id
+        scope.launch {
+            navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = id.last())
+        }
+    }
     // Keep the pane layout in sync with the window size:
     // - Growing to two-pane with no detail destination shows only the list pane until the user
     //   taps a row. Open a page right away (the last selected one, or the first page) so the
@@ -222,11 +262,14 @@ public fun PreferencePageScreen(
     LaunchedEffect(isTwoPane) {
         val onDetail = navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail
         when {
-            isTwoPane && !onDetail ->
+            isTwoPane && !onDetail -> {
+                val id = navigator.currentDestination?.contentKey ?: pages.first().id
+                pagePath = pathOf(id)
                 navigator.navigateTo(
                     pane = ListDetailPaneScaffoldRole.Detail,
-                    contentKey = navigator.currentDestination?.contentKey ?: pages.first().id,
+                    contentKey = id,
                 )
+            }
             isTwoPane && onDetail -> {
                 // Material3's internal snapTo (in rememberThreePaneScaffoldNavigator) does not
                 // reliably fire across a config change when the detail is already open, so the
@@ -284,7 +327,19 @@ public fun PreferencePageScreen(
     var scrollToIndex by remember { mutableStateOf<Int?>(null) }
 
     fun backAction() {
-        if (!isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail) {
+        val onDetail = destination?.pane == ListDetailPaneScaffoldRole.Detail
+        if (onDetail && pagePath.size > 1) {
+            // Nested in the tree (single- or two-pane): pop one level up (child -> parent)
+            // before considering a navigation back or leaving the screen.
+            scope.launch {
+                // Keep the field out of the focus tree while the list pane is restored, so
+                // the focus system does not put focus (and the keyboard) back on it.
+                fieldFocusEnabled = false
+                navigateToPath(pagePath.dropLast(1))
+                delay(400)
+                fieldFocusEnabled = true
+            }
+        } else if (!isTwoPane && onDetail) {
             scope.launch {
                 // Keep the field out of the focus tree while the list pane is restored, so
                 // the focus system does not put focus (and the keyboard) back on it.
@@ -301,12 +356,6 @@ public fun PreferencePageScreen(
     // System back: the scaffold pops detail -> list first, then the host leaves the screen.
     BackHandler(onBack = ::backAction)
 
-    fun selectPage(pageId: String) {
-        scope.launch {
-            navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = pageId)
-        }
-    }
-
     val isSearching = query.isNotEmpty()
     // The search index is built once by walking each page's preference tree, so it is always
     // in sync with the rows — no separate search entries to maintain.
@@ -318,18 +367,41 @@ public fun PreferencePageScreen(
             // same card), so the results list can key on it.
             var rowId = 0
             matches.flatMap { match ->
+                // The page's trail in the tree (e.g. "Theme > Colors"), shown under each of
+                // its result rows.
+                val path = (findPagePath(pages, match.page.id)?.map { it.title } ?: emptyList())
+                    .joinToString(" > ")
                 buildList {
                     if (match.matches.isEmpty()) {
                         // The page itself matched (by title/summary): show the page row.
-                        add(SearchEntry(id = rowId++, page = match.page, entry = null))
+                        add(SearchEntry(id = rowId++, page = match.page, path = path, entry = null))
                     }
                     // Show one row per matching preference entry of the page's tree.
-                    addAll(match.matches.map { SearchEntry(id = rowId++, page = match.page, entry = it) })
+                    addAll(
+                        match.matches.map {
+                            SearchEntry(id = rowId++, page = match.page, path = path, entry = it)
+                        },
+                    )
                 }
             }
         }
 
-    val currentPage = selectedPageId?.let { id -> pages.firstOrNull { it.id == id } }
+    val currentPage = selectedPageId?.let { id -> findPage(pages, id) }
+    // The trail of pages from the top level to the current one, for the breadcrumb and the
+    // search supporting text (may be stale for one frame after a navigation; it is re-derived
+    // from the real destination below).
+    val currentPath: List<PreferencePage> =
+        remember(pages, selectedPageId) {
+            if (selectedPageId != null) findPagePath(pages, selectedPageId) ?: emptyList() else emptyList()
+        }
+    // The parent of the page shown in the detail: its children are the rows of the list
+    // pane (the top-level pages while at the root).
+    val listRows: List<PreferencePage> =
+        if (selectedPageId != null && currentPath.size > 1) {
+            currentPath[currentPath.size - 2].subPages
+        } else {
+            pages
+        }
     val showBack =
         !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail && currentPage != null
 
@@ -377,30 +449,58 @@ public fun PreferencePageScreen(
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // A back chevron appears when we are nested inside a sub-page, so the
+                        // user can pop one level up without hunting the breadcrumb trail.
+                        if (currentPath.size > 1) {
+                            IconButton(onClick = { navigateToPath(pagePath.dropLast(1)) }) {
+                                BackChevron()
+                            }
+                        }
                         Text(
                             text = title,
-                            modifier = Modifier.padding(start = 16.dp),
+                            modifier =
+                                Modifier.padding(
+                                    start = if (currentPath.size > 1) 0.dp else 16.dp,
+                                ),
                             style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Icon(
-                            imageVector = Icons.Filled.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp).padding(horizontal = 4.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = currentPage?.title ?: "",
-                            modifier = Modifier.padding(end = 8.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        // One chevron-separated segment per level of the current page's
+                        // trail; tapping an ancestor pops the trail back to it. The last
+                        // (current) segment is plain text.
+                        currentPath.forEachIndexed { i, page ->
+                            Icon(
+                                imageVector = Icons.Filled.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp).padding(horizontal = 4.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (i == currentPath.lastIndex) {
+                                Text(
+                                    text = page.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            } else {
+                                Text(
+                                    text = page.title,
+                                    modifier = Modifier.clickable {
+                                        navigateToPath(pagePath.take(i + 1))
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -572,17 +672,23 @@ public fun PreferencePageScreen(
                                         val matchedEntry = entry.entry
                                         SearchEntryRow(
                                             // An entry match shows the preference's own title
-                                            // with the page as its subtitle; a page match
-                                            // shows the page's title and summary.
+                                            // with the page's trail as its subtitle; a page
+                                            // match shows the page's title and summary.
                                             entry = matchedEntry,
                                             page = entry.page,
+                                            path = entry.path,
                                             onClick = {
                                                 clearQuery()
                                                 if (matchedEntry != null) {
                                                     highlightedKey = matchedEntry.key
-                                                    scrollToIndex = matchedEntry.index
+                                                    // The detail column lists the page's
+                                                    // sub-page rows above its content, so
+                                                    // shift the entry's content-relative
+                                                    // index past them.
+                                                    scrollToIndex =
+                                                        matchedEntry.index + entry.page.subPages.size
                                                 }
-                                                selectPage(entry.page.id)
+                                                selectPageById(entry.page.id)
                                             },
                                         )
                                     }
@@ -599,9 +705,11 @@ public fun PreferencePageScreen(
                                         Spacer(Modifier.height(8.dp))
                                         // The page rows are each drawn in their own card,
                                         // with the first and last showing rounded
-                                        // top/bottom corners.
+                                        // top/bottom corners. The rows are the children of
+                                        // the page currently shown in the detail pane
+                                        // (the top-level pages while at the root).
                                         PreferenceCardGroup(
-                                            items = pages.map {
+                                            items = listRows.map {
                                                 page ->
                                                     PreferenceCardItem(
                                                         title = page.title,
@@ -611,7 +719,9 @@ public fun PreferencePageScreen(
                                                                 page = page,
                                                                 selected =
                                                                     page.id == selectedPageId,
-                                                                onClick = { selectPage(page.id) },
+                                                                onClick = {
+                                                                    selectPageById(page.id)
+                                                                },
                                                             )
                                                         },
                                                     )
@@ -716,6 +826,22 @@ public fun PreferencePageScreen(
                                                 bottom = PANE_FADING_EDGE_LENGTH,
                                             ),
                                     ) {
+                                        // This page's child pages, as rows above its own
+                                        // preferences: tapping one navigates deeper into the
+                                        // tree (the list pane switches to that page's
+                                        // children).
+                                        if (page.subPages.isNotEmpty()) {
+                                            items(
+                                                page.subPages,
+                                                key = { sub -> "subpage:${sub.id}" },
+                                            ) { sub ->
+                                                PreferencePageRow(
+                                                    page = sub,
+                                                    selected = sub.id == selectedPageId,
+                                                    onClick = { selectPageById(sub.id) },
+                                                )
+                                            }
+                                        }
                                         page.content(this)
                                     }
                                     // The compact bar: declared after the list so it draws
@@ -744,10 +870,7 @@ public fun PreferencePageScreen(
                                             ) {
                                                 if (showBack) {
                                                     IconButton(onClick = ::backAction) {
-                                                        Icon(
-                                                            imageVector = Icons.Filled.ArrowBack,
-                                                            contentDescription = "Back",
-                                                        )
+                                                        BackChevron()
                                                     }
                                                 }
                                                 Text(
@@ -770,11 +893,55 @@ public fun PreferencePageScreen(
     }
 }
 
+/**
+ * Builds a [WindowAdaptiveInfo] for a host measured at [size] px, so a surface smaller than
+ * the window (a modal bottom sheet, a dialog, a split pane, …) can pass it to
+ * [PreferencePageScreen.adaptiveInfo] and have the screen adapt to *the host* rather than to
+ * the window. The posture is empty (no hinges): the device's fold does not apply to the
+ * host's own surface, and including it would make the sheet snap to the crease.
+ *
+ * A pure function so it can be memoized (e.g. in `remember`); pass [LocalDensity.current].
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+public fun windowAdaptiveInfoFor(size: IntSize, density: Density): WindowAdaptiveInfo =
+    with(density) {
+        WindowAdaptiveInfo(
+            // Built from the public WindowSizeClass constructor (the computeFromDpSize*
+            // helpers are not exposed by the window-core on the compile classpath). The
+            // constructor takes the min width/height in dp and classifies the size the same
+            // way for the medium-width breakpoint the two-pane directive keys on.
+            windowSizeClass =
+                WindowSizeClass(size.width.toDp().value.toInt(), size.height.toDp().value.toInt()),
+            windowPosture = Posture(),
+        )
+    }
+
 /** The panes that can hold focus; the last one to do so decides single-pane landing. */
 private enum class ActivePane { List, Detail }
 
-/** A search result row: a page, or a preference entry of one of its pages. */
-private data class SearchEntry(val id: Int, val page: PreferencePage, val entry: SearchIndexEntry?)
+/**
+ * A search result row: a page (optionally nested in the tree; [path] names its trail, e.g.
+ * "Theme > Colors"), or a preference entry of one of its pages.
+ */
+private data class SearchEntry(
+    val id: Int,
+    val page: PreferencePage,
+    val path: String,
+    val entry: SearchIndexEntry?,
+)
+
+/**
+ * A left-pointing chevron used as the back affordance, matching the chevron style of the
+ * breadcrumb separators (a right chevron rotated 180°) rather than the filled arrow.
+ */
+@Composable
+private fun BackChevron() {
+    Icon(
+        imageVector = Icons.Filled.ChevronRight,
+        contentDescription = "Back",
+        modifier = Modifier.size(24.dp).rotate(180f),
+    )
+}
 
 /**
  * One row of the list pane, styled with the library's preference theme.
@@ -809,19 +976,29 @@ private fun PreferencePageRow(
 
 /**
  * One search result row, styled as an MD3 [ListItem] (as in the material3 search bar samples):
- * a leading search icon, the entry's title, and a supporting line naming the page it lives in.
- * A page-level match (no [entry]) shows the page's own title and summary instead.
+ * a leading search icon, the entry's title, and a supporting line naming where the page
+ * lives in the tree. A page-level match (no [entry]) shows the page's own title and summary
+ * instead.
  */
 @Composable
 private fun SearchEntryRow(
     entry: SearchIndexEntry?,
     page: PreferencePage,
+    path: String,
     onClick: () -> Unit,
 ) {
     ListItem(
         headlineContent = { Text(text = entry?.title ?: page.title) },
         supportingContent = {
-            val supporting = entry?.let { page.title } ?: page.summary
+            val supporting =
+                if (entry != null) {
+                    // The entry lives in [page]; the page's trail (e.g. "Theme > Colors")
+                    // shows where. Top-level pages have a one-segment trail, equal to
+                    // their own title — show just it.
+                    path
+                } else {
+                    page.summary
+                }
             if (!supporting.isNullOrEmpty()) {
                 Text(text = supporting)
             }

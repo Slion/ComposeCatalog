@@ -59,9 +59,12 @@ kotlin {
         androidMain {
             dependencies {
                 implementation(libs.androidx.activity.compose)
-                implementation(libs.androidx.material3.adaptive)
-                implementation(libs.androidx.material3.adaptive.layout)
-                implementation(libs.androidx.material3.adaptive.navigation)
+                // Exposed with api (not implementation): WindowAdaptiveInfo is part of the
+                // library's public API (PreferencePageScreen.adaptiveInfo), so consumers must
+                // have it on their compile classpath to pass a value.
+                api(libs.androidx.material3.adaptive)
+                api(libs.androidx.material3.adaptive.layout)
+                api(libs.androidx.material3.adaptive.navigation)
                 implementation(libs.timber)
             }
         }

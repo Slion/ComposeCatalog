@@ -50,4 +50,5 @@ fun samplePages(
         twoTargetPreferencePage(),
         twoTargetIconButtonPreferencePage(),
         twoTargetSwitchPreferencePage(),
+        nestedPreferencePage(),
     )

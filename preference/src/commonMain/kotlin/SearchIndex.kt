@@ -84,12 +84,14 @@ public data class SearchIndexEntry(
 )
 
 /**
- * Builds the search index of [pages] by walking each page's content against a recording
- * [LazyListScope]. The builders' registration code runs, but no item content is ever composed,
- * so the index is always in sync with the page's rows — no separate search entries to maintain.
+ * Builds the search index of [pages] by walking each page's content — including every level
+ * of [PreferencePage.subPages] — against a recording [LazyListScope]. The builders'
+ * registration code runs, but no item content is ever composed, so the index is always in
+ * sync with the page's rows — no separate search entries to maintain. Page ids must be
+ * unique within the whole tree, as they key both the index and the navigation.
  */
 public fun buildSearchIndex(pages: List<PreferencePage>): Map<String, List<SearchIndexEntry>> =
-    pages.associateBy({ it.id }) { page ->
+    pages.walkPages().associateBy({ it.id }) { page ->
         SearchIndexer.withCollector { recorder ->
             page.content(SearchIndexScope(recorder))
             recorder.entries.toList()
