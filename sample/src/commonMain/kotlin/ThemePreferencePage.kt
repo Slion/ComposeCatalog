@@ -45,7 +45,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import net.slions.compose.preference.ListPreference
-import net.slions.compose.preference.ListPreferenceType
 import net.slions.compose.preference.PreferencePage
 import net.slions.compose.preference.SliderPreference
 import net.slions.compose.preference.preferenceCardGroup
@@ -116,7 +115,6 @@ fun themePreferencePage(
                     title = "Font",
                     summary = fontLabel(values.fontFamily),
                     icon = { Icon(imageVector = Icons.Outlined.TextFields, contentDescription = null) },
-                    type = ListPreferenceType.DROPDOWN_MENU,
                     valueToText = { AnnotatedString(fontLabel(it)) },
                 )
             }
