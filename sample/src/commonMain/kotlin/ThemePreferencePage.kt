@@ -53,24 +53,20 @@ fun themePreferencePage(
     PreferencePage(
         id = "theme",
         title = "Theme",
-        summary = "Style, colors, and text. Settings are persisted.",
+        summary = "Mode, colors, and text. Settings are persisted.",
     ) {
-        preferenceCategory(key = "theme_style_category", title = "Appearance")
-        preferenceCardGroup(key = "theme_style_group") {
+        preferenceCategory(key = "theme_colors_category", title = "Colors")
+        preferenceCardGroup(key = "theme_colors_group") {
             card {
                 ListPreference(
                     value = values.themeMode,
                     onValueChange = { onValuesChange(values.copy(themeMode = it)) },
                     values = SampleThemeMode.entries,
-                    title = "Style",
+                    title = "Mode",
                     summary = values.themeMode.label,
                     valueToText = { AnnotatedString(it.label) },
                 )
             }
-        }
-
-        preferenceCategory(key = "theme_colors_category", title = "Colors")
-        preferenceCardGroup(key = "theme_colors_group") {
             card {
                 AccentList(
                     value = values.accent ?: "",
@@ -103,9 +99,10 @@ fun themePreferencePage(
                     value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),
                     onValueChange = { onValuesChange(values.copy(cornerRadiusDp = it.toInt())) },
                     valueRange = 0f..32f,
-                    // 1 dp steps over 0..32 = 32 segments, so 31 intermediate stops.
-                    valueSteps = 32 - 1,
+                    // 2 dp steps over 0..32 = 16 segments, so 15 intermediate stops.
+                    valueSteps = (32 - 0) / 2 - 1,
                     valueText = { "${it.toInt()} dp" },
+                    live = true,
                 )
             }
             card {
@@ -117,6 +114,7 @@ fun themePreferencePage(
                     // 5% steps over 80..140 = 12 segments, so 11 intermediate stops.
                     valueSteps = (140 - 80) / 5 - 1,
                     valueText = { "${it.toInt()}%" },
+                    live = true,
                 )
             }
             card {

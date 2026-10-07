@@ -598,6 +598,12 @@ public fun PreferencePageScreen(
                                     LazyColumn(
                                         state = detailState,
                                         modifier = Modifier.fillMaxSize(),
+                                        // The compact bar overlays the top of the list and is always
+                                        // visible in single-pane (where the back arrow lives); inset
+                                        // the first item by the bar's height so the page's first row —
+                                        // e.g. its top category header — isn't hidden beneath it.
+                                        contentPadding =
+                                            if (showBack) PaddingValues(top = 56.dp) else PaddingValues(),
                                     ) {
                                         page.content(this)
                                     }
