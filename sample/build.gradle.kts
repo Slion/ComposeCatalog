@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-
 plugins {
     alias(libs.plugins.android.kotlinMultiplatformLibrary)
     alias(libs.plugins.compose)
@@ -24,15 +22,7 @@ plugins {
 }
 
 kotlin {
-    // From AndroidX and Compose Multiplatform
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:collection/collection/build.gradle
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:datastore/datastore/build.gradle
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:buildSrc/private/src/main/kotlin/androidx/build/AndroidXMultiplatformExtension.kt
-    // @see
-    // https://github.com/JetBrains/compose-multiplatform/blob/master/components/resources/library/build.gradle.kts
+    // Android-only: the sample app targets the Android platform exclusively.
     android {
         namespace = "net.slions.compose.preference.sample"
         buildToolsVersion = libs.versions.android.buildTools.get()
@@ -47,57 +37,19 @@ kotlin {
         }
         packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     }
-    iosArm64()
-    iosSimulatorArm64()
-    js {
-        browser()
-        binaries.executable()
-    }
-    jvm()
-    // linuxArm64()
-    // linuxX64()
-    macosArm64()
-    // mingwX64()
-    // tvosArm64()
-    // tvosSimulatorArm64()
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
-    // watchosArm32()
-    // watchosArm64()
-    // watchosDeviceArm64()
-    // watchosSimulatorArm64()
 
-    applyDefaultHierarchyTemplate()
     sourceSets {
-        val commonJvmMain by creating { dependsOn(commonMain.get()) }
-        val commonJvmTest by creating { dependsOn(commonTest.get()) }
-        val otherMain by creating { dependsOn(commonMain.get()) }
-        androidMain { dependsOn(commonJvmMain) }
-        androidUnitTest { dependsOn(commonJvmTest) }
-        jvmMain {
-            dependsOn(commonJvmMain)
-            dependsOn(otherMain)
-        }
-        jvmTest { dependsOn(commonJvmTest) }
-        nativeMain { dependsOn(otherMain) }
-        jsMain { dependsOn(otherMain) }
-        wasmJsMain { dependsOn(otherMain) }
-
         commonMain {
             dependencies {
                 implementation(project(":preference"))
-                implementation(libs.androidx.activity.compose)
                 // TODO: Migrate away from deprecated dependency aliases once they have a BOM for
                 //  compatible versions.
                 implementation(compose.components.resources)
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.preview)
-                // Google Material Symbols (variable-font based) — provides icons the deprecated
-                // material-icons-extended set no longer has, e.g. "colors".
+                // Google Material Symbols (variable-font based) — provides icons the
+                // deprecated material-icons-extended set no longer has, e.g. "colors".
                 implementation("dev.vicart:compose-material-symbols:1.1.6")
             }
         }
@@ -106,12 +58,6 @@ kotlin {
             dependencies {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.kotlinx.coroutines.android)
-            }
-        }
-        jvmMain {
-            dependencies {
-                implementation(compose.desktop.currentOs)
-                implementation(libs.kotlinx.coroutines.swing)
             }
         }
     }

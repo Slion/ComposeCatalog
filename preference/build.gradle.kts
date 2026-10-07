@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-
 plugins {
     alias(libs.plugins.android.kotlinMultiplatformLibrary)
     alias(libs.plugins.compose)
@@ -29,15 +27,7 @@ plugins {
 kotlin {
     explicitApi()
 
-    // From AndroidX and Compose Multiplatform
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:collection/collection/build.gradle
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:datastore/datastore/build.gradle
-    // @see
-    // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:buildSrc/private/src/main/kotlin/androidx/build/AndroidXMultiplatformExtension.kt
-    // @see
-    // https://github.com/JetBrains/compose-multiplatform/blob/master/components/resources/library/build.gradle.kts
+    // Android-only: this library targets the Android platform exclusively.
     android {
         namespace = "net.slions.compose.preference"
         buildToolsVersion = libs.versions.android.buildTools.get()
@@ -52,46 +42,8 @@ kotlin {
         }
         packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     }
-    iosArm64()
-    iosSimulatorArm64()
-    js {
-        // https://youtrack.jetbrains.com/issue/CMP-4906
-        binaries.executable()
-        browser()
-    }
-    jvm()
-    // linuxArm64()
-    // linuxX64()
-    macosArm64()
-    // mingwX64()
-    // tvosArm64()
-    // tvosSimulatorArm64()
-    @OptIn(ExperimentalWasmDsl::class) wasmJs {
-        // https://youtrack.jetbrains.com/issue/CMP-4906
-        binaries.executable()
-        browser()
-    }
-    // watchosArm32()
-    // watchosArm64()
-    // watchosDeviceArm64()
-    // watchosSimulatorArm64()
 
-    applyDefaultHierarchyTemplate()
     sourceSets {
-        val commonJvmMain by creating { dependsOn(commonMain.get()) }
-        val commonJvmTest by creating { dependsOn(commonTest.get()) }
-        androidMain { dependsOn(commonJvmMain) }
-        androidUnitTest { dependsOn(commonJvmTest) }
-        jvmMain { dependsOn(commonJvmMain) }
-        jvmTest { dependsOn(commonJvmTest) }
-
-        val jvmWasmJsMain by creating { dependsOn(commonMain.get()) }
-        val jvmWasmJsTest by creating { dependsOn(commonTest.get()) }
-        jvmMain { dependsOn(jvmWasmJsMain) }
-        jvmTest { dependsOn(jvmWasmJsTest) }
-        wasmJsMain { dependsOn(jvmWasmJsMain) }
-        wasmJsTest { dependsOn(jvmWasmJsTest) }
-
         commonMain {
             dependencies {
                 // TODO: Migrate away from deprecated dependency aliases once they have a BOM for
@@ -113,6 +65,5 @@ kotlin {
             }
         }
         commonTest { dependencies { implementation(libs.kotlin.test) } }
-        jvmWasmJsMain.dependencies { implementation(libs.kotlinx.serialization.json) }
     }
 }

@@ -402,7 +402,11 @@ public fun PreferencePageScreen(
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .height(48.dp)
-                                                    .padding(start = 8.dp, end = 8.dp),
+                                                    .padding(
+                                                        horizontal =
+                                                            LocalPreferenceTheme.current
+                                                                .horizontalSpacing,
+                                                    ),
                                             shape = RoundedCornerShape(24.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant,
                                         ) {

@@ -23,8 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.Icon
-import dev.vicart.compose.material.symbols.MaterialSymbol
 import androidx.compose.ui.text.AnnotatedString
+import dev.vicart.compose.material.symbols.MaterialSymbol
 import net.slions.compose.preference.ColorPreference
 import net.slions.compose.preference.AccentColorOption
 import net.slions.compose.preference.LiveSliderPreference

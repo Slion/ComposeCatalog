@@ -6,6 +6,10 @@
 
 This is not an officially supported Google product.
 
+> **Android only.** This library targets the Android platform exclusively. It was forked from a
+> multiplatform (iOS/JVM/JS/Wasm) project, but those targets have been dropped to keep the
+> dependency surface small and the build fast.
+
 ## Preview
 
 <p><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="32%" /> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="32%" /></p>
@@ -110,15 +114,14 @@ The [`Preferences`](preference/src/commonMain/kotlin/Preferences.kt) interface d
 
 - It can be implemented by other mechanisms like [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), thanks to being a public interface instead of an abstract class with only an internal constructor.
 - It doesn't have to be produced and updated via a [`DataStore`](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore).
-- It doesn't mandate a fixed set of types that an implementation has to support, so that implementations have the flexibility to support much more or less types. The implementations within this library supports most of the types supported by `SharedPreferences` **except for `Long`** by default (due to non-Android platforms). You can opt in to Android-only support for `Long` by setting `isDefaultPreferenceFlowAndroidLongSupportEnabled` to `true`, and you can opt in to Apple-only support for `Long` **in place of** `Int` by setting `isDefaultPreferenceFlowAppleLongOnlySupportEnabled` to `true`.
+- It doesn't mandate a fixed set of types that an implementation has to support, so that implementations have the flexibility to support much more or less types. The implementations within this library supports most of the types supported by `SharedPreferences` **except for `Long`** by default. You can opt in to `Long` support by setting `isDefaultPreferenceFlowAndroidLongSupportEnabled` to `true`.
 
-The default data source provided by this library (`createDefaultPreferenceFlow()`) is implemented with [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences) on Android (or [`NSUserDefaults`](https://developer.apple.com/documentation/foundation/userdefaults) on Apple, [`Preferences`](https://docs.oracle.com/javase/8/docs/api/java/util/prefs/Preferences.html) on JVM, and [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) on Web), because:
+The default data source provided by this library (`createDefaultPreferenceFlow()`) is implemented with [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), because:
 
 - `SharedPreferences` is available as part of the Android framework, and doesn't require external dependencies like AndroidX DataStore which [bundles its own copy of `protobuf-lite`](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:datastore/datastore-preferences-core/build.gradle;l=108;drc=9fd0cda7bb963d41fd25645b0761776caa830ed7).
 - `SharedPreferences` can actually be [10x faster](https://stackoverflow.com/q/71601343) than AndroidX DataStore, likely due to its existing optimizations and simple threading and persistence model (XML is simple enough to be faster than Protobuf).
 - `SharedPreferences` has a synchronous API, but it is actually async except for the first (un-cached) read, and allows in-memory value change without waiting for the disk write to complete, which is good for the preference use case.
 - Existing users of `SharedPreferences` can use this library directly with the default data source.
-- AndroidX DataStore doesn't support Kotlin/JS and Kotlin/Wasm yet.
 
 **There should only be at most one invocation of `createDefaultPreferenceFlow()`**, similar to creating `DataStore` in AndroidX DataStore. It is also only for usage within a single process due to being backed by `SharedPreferences`.
 
