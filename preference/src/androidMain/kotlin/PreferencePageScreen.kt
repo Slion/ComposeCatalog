@@ -80,15 +80,17 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -292,21 +294,16 @@ public fun PreferencePageScreen(
     val showBack =
         !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail && currentPage != null
 
-    // Collapsing header: a single persistent 56dp bar (the title bar) that never
-    // vanishes. Its title morphs continuously between 30sp (expanded) and 22sp
-    // (collapsed), and the search pill — the first in-list item — slides behind the
-    // bar as the list scrolls, so the header's effective height shrinks from
-    // bar+pill to just the bar. A faded search affordance fades into the bar's
-    // trailing edge and, when tapped, scrolls the pill back into view and focuses
-    // the field. The same pattern (bar height as a pure function of scroll offset)
-    // applies to the detail pane, whose bar carries the back arrow in single-pane
-    // mode. Offsets are observed via snapshotFlow because reading them directly in
-    // composition does not reliably schedule a recomposition.
+    // Single-pane headers: the list pane carries a persistent, static 56dp title bar
+    // with an always-visible search affordance; the search pill (the first in-list
+    // item) simply scrolls behind it. Tapping the affordance scrolls the pill back
+    // into view and focuses the field. The detail pane's compact bar is equally
+    // static in single-pane (it always shows, carrying the back arrow), but in
+    // two-pane it grows in as the page scrolls. Offsets are observed via
+    // snapshotFlow because reading them directly in composition does not reliably
+    // schedule a recomposition.
     val listState = remember { LazyListState() }
     val detailState = rememberLazyListState()
-    // The scroll distance at which the search pill (56dp inset + 48dp tall) has fully
-    // slid behind the 56dp bar: 104 - 56 = 48dp.
-    val listHeaderHeight = with(LocalDensity.current) { 48.dp.toPx() }
     val barHeightPx = with(LocalDensity.current) { 56.dp.toPx() }
     fun headerProgress(state: LazyListState, distancePx: Float): Float =
         if (state.firstVisibleItemIndex == 0) {
@@ -314,11 +311,6 @@ public fun PreferencePageScreen(
         } else {
             1f
         }
-    var listHeaderProgress by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(listState) {
-        snapshotFlow { headerProgress(listState, listHeaderHeight) }
-            .collect { listHeaderProgress = it }
-    }
     var detailHeaderProgressRaw by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(detailState) {
         snapshotFlow { headerProgress(detailState, barHeightPx) }
@@ -381,7 +373,29 @@ public fun PreferencePageScreen(
                         Box(Modifier.fillMaxSize().then(trackPaneFocus(ActivePane.List))) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize(),
+                                // In single-pane the fixed 56dp header overlays the top of
+                                // the list, so the top fade is offset down below it (and
+                                // the content padded past it); in two-pane the fade sits at
+                                // the very top, just below the breadcrumb.
+                                modifier =
+                                    Modifier.fillMaxSize()
+                                        .paneFadingEdges(
+                                            topOffset = if (isTwoPane) 0.dp else 56.dp,
+                                        ),
+                                // Inset the content past the static fading edges so items
+                                // scroll under the fades instead of ending right at the
+                                // pane boundary; the fixed single-pane header bar adds to
+                                // the top inset.
+                                contentPadding =
+                                    PaddingValues(
+                                        top =
+                                            if (isTwoPane) {
+                                                PANE_FADING_EDGE_LENGTH
+                                            } else {
+                                                56.dp + PANE_FADING_EDGE_LENGTH
+                                            },
+                                        bottom = PANE_FADING_EDGE_LENGTH,
+                                    ),
                             ) {
                                 // The search pill: an in-list item at the top of the
                                 // list pane. In single-pane it sits below the fixed 56dp
@@ -389,9 +403,13 @@ public fun PreferencePageScreen(
                                 // so it only needs a small top inset.
                                 item {
                                     Column(Modifier.fillMaxWidth()) {
-                                        Spacer(
-                                            Modifier.height(if (isTwoPane) 8.dp else 56.dp),
-                                        )
+                                        // A little breathing room below the breadcrumb in
+                                        // two-pane; in single-pane the fixed header bar
+                                        // (56dp) is already accounted for in the
+                                        // LazyColumn's content padding.
+                                        if (isTwoPane) {
+                                            Spacer(Modifier.height(8.dp))
+                                        }
                                         // An MD3-style search pill. The results are shown
                                         // inline in this pane, so a plain text field is
                                         // used instead of the state-based
@@ -549,9 +567,9 @@ public fun PreferencePageScreen(
                                 }
                             }
                             // The single persistent header: a fixed 56dp bar at the top
-                            // that never vanishes — the header's height changes by the
-                            // pill sliding in/out below it, and the title morphs
-                            // continuously in place (22sp collapsed → 30sp expanded).
+                            // that never vanishes and never changes — just the title at a
+                            // single size. The search lives in the in-list pill, which
+                            // simply scrolls behind the bar.
                             // In two-pane mode it is not shown at all: the breadcrumb
                             // above the panes carries the title, and the search pill is
                             // a plain in-list item there.
@@ -563,58 +581,15 @@ public fun PreferencePageScreen(
                                             .align(Alignment.TopStart)
                                             .height(56.dp),
                                     color = MaterialTheme.colorScheme.surface,
-                                    shadowElevation = 6.dp * listHeaderProgress,
+                                    shadowElevation = 6.dp,
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = title,
-                                            modifier =
-                                                Modifier
-                                                    .weight(1f)
-                                                    .padding(horizontal = 16.dp),
-                                            style =
-                                                MaterialTheme.typography.titleLarge.copy(
-                                                    fontSize =
-                                                        lerp(30f, 22f, listHeaderProgress).sp,
-                                                ),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        // A search affordance that fades in on the right as
-                                        // the pill collapses behind the bar; tapping it
-                                        // scrolls the pill back into view and focuses it.
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .height(48.dp)
-                                                    // Alpha must wrap the background, so
-                                                    // the whole affordance — pill and
-                                                    // icon — fades, not just the icon.
-                                                    .alpha(listHeaderProgress)
-                                                    .clip(RoundedCornerShape(24.dp))
-                                                    .background(
-                                                        MaterialTheme.colorScheme.surfaceVariant,
-                                                    )
-                                                    .padding(horizontal = 20.dp)
-                                                    .clickable {
-                                                        scope.launch {
-                                                            listState.animateScrollToItem(0)
-                                                            fieldFocusRequester.requestFocus()
-                                                        }
-                                                    },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Search,
-                                                contentDescription = "Search",
-                                                modifier = Modifier.size(24.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
+                                    Text(
+                                        text = title,
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                 }
                             }
                         }
@@ -654,13 +629,32 @@ public fun PreferencePageScreen(
                                     }
                                     LazyColumn(
                                         state = detailState,
-                                        modifier = Modifier.fillMaxSize(),
-                                        // The compact bar overlays the top of the list and is always
-                                        // visible in single-pane (where the back arrow lives); inset
-                                        // the first item by the bar's height so the page's first row —
-                                        // e.g. its top category header — isn't hidden beneath it.
+                                        // In single-pane the compact bar overlays the top of
+                                        // the list, so the top fade is offset down below it;
+                                        // in two-pane there is no bar, so the fade sits at the
+                                        // very top, just below the breadcrumb.
+                                        modifier =
+                                            Modifier.fillMaxSize()
+                                                .paneFadingEdges(
+                                                    topOffset = if (showBack) 56.dp else 0.dp,
+                                                ),
+                                        // The compact bar overlays the top of the list and is
+                                        // always visible in single-pane (where the back arrow
+                                        // lives); inset the first item by the bar's height so
+                                        // the page's first row — e.g. its top category header —
+                                        // isn't hidden beneath it. The top and bottom insets
+                                        // also keep the content clear of the static fading
+                                        // edges so items scroll under them.
                                         contentPadding =
-                                            if (showBack) PaddingValues(top = 56.dp) else PaddingValues(),
+                                            PaddingValues(
+                                                top =
+                                                    if (showBack) {
+                                                        56.dp + PANE_FADING_EDGE_LENGTH
+                                                    } else {
+                                                        PANE_FADING_EDGE_LENGTH
+                                                    },
+                                                bottom = PANE_FADING_EDGE_LENGTH,
+                                            ),
                                     ) {
                                         page.content(this)
                                     }
@@ -780,3 +774,53 @@ private fun SearchEntryRow(
 
 /** How long a search-selected preference row stays highlighted in the detail pane. */
 private const val HIGHLIGHT_DURATION_MS = 2000L
+
+/** Length of the gradient that fades out the pane content at its top and bottom edges. */
+private val PANE_FADING_EDGE_LENGTH = 32.dp
+
+/**
+ * Static fading edges for a vertical scroll area: short surface-colored gradients at the
+ * top and bottom of the pane that are always present. The panes pair this with vertical
+ * [PaddingValues] of the same length on their [LazyColumn], so the content scrolls under
+ * the fades instead of the fades popping in and out with the scroll position.
+ *
+ * [topOffset] pushes the top fade down below an opaque bar that overlays the top of the
+ * list in single-pane mode (the fixed list header, or the detail compact bar); without it
+ * the fade would be painted behind the bar and never visible. In two-pane there is no such
+ * overlay, so it stays 0.
+ */
+@Composable
+private fun Modifier.paneFadingEdges(topOffset: Dp = 0.dp): Modifier {
+    // Captured in composition (theme/density are composable reads), then used from the
+    // non-composable draw lambda.
+    val surface = MaterialTheme.colorScheme.surface
+    val edgePx = with(LocalDensity.current) { PANE_FADING_EDGE_LENGTH.toPx() }
+    val topOffsetPx = with(LocalDensity.current) { topOffset.toPx() }
+    return this.then(
+        Modifier.drawWithContent {
+            drawContent()
+            // Top edge, starting below any overlaying bar.
+            drawRect(
+                brush =
+                    Brush.verticalGradient(
+                        colors = listOf(surface, surface.copy(alpha = 0f)),
+                        startY = topOffsetPx,
+                        endY = topOffsetPx + edgePx,
+                    ),
+                topLeft = Offset(0f, topOffsetPx),
+                size = Size(size.width, edgePx),
+            )
+            // Bottom edge.
+            drawRect(
+                brush =
+                    Brush.verticalGradient(
+                        colors = listOf(surface.copy(alpha = 0f), surface),
+                        startY = size.height - edgePx,
+                        endY = size.height,
+                    ),
+                topLeft = Offset(0f, size.height - edgePx),
+                size = Size(size.width, edgePx),
+            )
+        },
+    )
+}
