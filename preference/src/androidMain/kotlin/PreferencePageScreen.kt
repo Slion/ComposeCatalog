@@ -334,6 +334,45 @@ public fun PreferencePageScreen(
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            // A breadcrumb that spans both panes: the screen title, a separator, and the
+            // page currently shown in the detail pane. Only present in two-pane mode, where
+            // there is room to show the navigation trail; in single-pane the per-pane bars
+            // (with their back arrow) already convey position.
+            if (isTwoPane) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = title,
+                            modifier = Modifier.padding(start = 16.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp).padding(horizontal = 4.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = currentPage?.title ?: "",
+                            modifier = Modifier.padding(end = 8.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
             ListDetailPaneScaffold(
                 directive = navigator.scaffoldDirective,
                 scaffoldState = navigator.scaffoldState,
@@ -344,14 +383,15 @@ public fun PreferencePageScreen(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
                             ) {
-                                // The search pill: an in-list item that scrolls with the
-                                // content. The 56dp top spacer pushes the pill just
-                                // below the fixed 56dp header bar when the list is at
-                                // the top; as the list scrolls the pill slides up behind
-                                // the bar, collapsing the header down to just the bar.
+                                // The search pill: an in-list item at the top of the
+                                // list pane. In single-pane it sits below the fixed 56dp
+                                // header bar; in two-pane there is no per-pane header,
+                                // so it only needs a small top inset.
                                 item {
                                     Column(Modifier.fillMaxWidth()) {
-                                        Spacer(Modifier.height(56.dp))
+                                        Spacer(
+                                            Modifier.height(if (isTwoPane) 8.dp else 56.dp),
+                                        )
                                         // An MD3-style search pill. The results are shown
                                         // inline in this pane, so a plain text field is
                                         // used instead of the state-based
@@ -508,62 +548,68 @@ public fun PreferencePageScreen(
                             // that never vanishes — the header's height changes by the
                             // pill sliding in/out below it, and the title morphs
                             // continuously in place (22sp collapsed → 30sp expanded).
-                            Surface(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .align(Alignment.TopStart)
-                                        .height(56.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                shadowElevation = 6.dp * listHeaderProgress,
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalAlignment = Alignment.CenterVertically,
+                            // In two-pane mode it is not shown at all: the breadcrumb
+                            // above the panes carries the title, and the search pill is
+                            // a plain in-list item there.
+                            if (!isTwoPane) {
+                                Surface(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .align(Alignment.TopStart)
+                                            .height(56.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shadowElevation = 6.dp * listHeaderProgress,
                                 ) {
-                                    Text(
-                                        text = title,
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .padding(horizontal = 16.dp),
-                                        style =
-                                            MaterialTheme.typography.titleLarge.copy(
-                                                fontSize = lerp(30f, 22f, listHeaderProgress).sp,
-                                            ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    // A search affordance that fades in on the right as
-                                    // the pill collapses behind the bar; tapping it
-                                    // scrolls the pill back into view and focuses it.
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .height(48.dp)
-                                                // Alpha must wrap the background, so
-                                                // the whole affordance — pill and
-                                                // icon — fades, not just the icon.
-                                                .alpha(listHeaderProgress)
-                                                .clip(RoundedCornerShape(24.dp))
-                                                .background(
-                                                    MaterialTheme.colorScheme.surfaceVariant,
-                                                )
-                                                .padding(horizontal = 20.dp)
-                                                .clickable {
-                                                    scope.launch {
-                                                        listState.animateScrollToItem(0)
-                                                        fieldFocusRequester.requestFocus()
-                                                    }
-                                                },
-                                        contentAlignment = Alignment.Center,
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Search,
-                                            contentDescription = "Search",
-                                            modifier = Modifier.size(24.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        Text(
+                                            text = title,
+                                            modifier =
+                                                Modifier
+                                                    .weight(1f)
+                                                    .padding(horizontal = 16.dp),
+                                            style =
+                                                MaterialTheme.typography.titleLarge.copy(
+                                                    fontSize =
+                                                        lerp(30f, 22f, listHeaderProgress).sp,
+                                                ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
+                                        // A search affordance that fades in on the right as
+                                        // the pill collapses behind the bar; tapping it
+                                        // scrolls the pill back into view and focuses it.
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .height(48.dp)
+                                                    // Alpha must wrap the background, so
+                                                    // the whole affordance — pill and
+                                                    // icon — fades, not just the icon.
+                                                    .alpha(listHeaderProgress)
+                                                    .clip(RoundedCornerShape(24.dp))
+                                                    .background(
+                                                        MaterialTheme.colorScheme.surfaceVariant,
+                                                    )
+                                                    .padding(horizontal = 20.dp)
+                                                    .clickable {
+                                                        scope.launch {
+                                                            listState.animateScrollToItem(0)
+                                                            fieldFocusRequester.requestFocus()
+                                                        }
+                                                    },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Search,
+                                                contentDescription = "Search",
+                                                modifier = Modifier.size(24.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -617,8 +663,10 @@ public fun PreferencePageScreen(
                                     // The compact bar: declared after the list so it draws
                                     // above the content, and clipped to a fraction of its
                                     // height so it slides down from the top as the page's
-                                    // first row scrolls away.
-                                    if (detailHeaderProgress > 0.01f) {
+                                    // first row scrolls away. In two-pane mode it is never
+                                    // shown: the breadcrumb above the panes already names
+                                    // the page, so the bar would only duplicate it.
+                                    if (!isTwoPane && detailHeaderProgress > 0.01f) {
                                         Surface(
                                             modifier =
                                                 Modifier
