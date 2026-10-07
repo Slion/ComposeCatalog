@@ -298,24 +298,35 @@ public fun PreferencePageScreen(
     // top-level pages while at the root). Tapping a sub-page row pushes its id, tapping a
     // breadcrumb segment (or back) pops to that ancestor.
     var pagePath by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    // True once the user explicitly opens a page (row tap, breadcrumb, search result).
+    // Survives rotation so a later grow to two-pane can refill the detail pane; a pure
+    // rotation round trip on a fresh launch must stay at the root level.
+    var userSelectedPage by rememberSaveable { mutableStateOf(false) }
     fun pathOf(pageId: String): List<String> =
         findPagePath(pages, pageId)?.map { it.id } ?: listOf(pageId)
     fun selectPageById(pageId: String) {
+        userSelectedPage = true
         pagePath = pathOf(pageId)
         scope.launch {
             navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = pageId)
         }
     }
     fun navigateToPath(id: List<String>) {
+        // An empty path means "back to the root list" (breadcrumb at the top level),
+        // which is not a selection: forget the flag so size round trips stay at the root.
+        userSelectedPage = id.isNotEmpty()
         pagePath = id
-        scope.launch {
-            navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = id.last())
+        if (id.isNotEmpty()) {
+            scope.launch {
+                navigator.navigateTo(pane = ListDetailPaneScaffoldRole.Detail, contentKey = id.last())
+            }
         }
     }
     // Keep the pane layout in sync with the window size:
-    // - Growing to two-pane with no detail destination shows only the list pane until the user
-    //   taps a row. Open a page right away (the last selected one, or the first page) so the
-    //   two-pane layout appears immediately on rotation.
+    // - Growing to two-pane with no detail destination opens a page right away (the last
+    //   open one, or the first page) so the two-pane layout is not empty. The page is
+    //   only a visual filler when the user never selected one: shrinking back pops to the
+    //   root list, so a rotation round trip on a fresh launch ends where it started.
     // - Shrinking back to a single partition leaves the destination history pointing at the
     //   detail pane, which keeps the detail pane expanded (and the list hidden) until the user
     //   presses back. Pop back to the list so the layout collapses to single-pane immediately.
@@ -339,7 +350,16 @@ public fun PreferencePageScreen(
                     ?.snapTo(navigator.scaffoldValue)
             }
             !isTwoPane && onDetail -> {
-                if (lastActivePane != ActivePane.List) {
+                if (!userSelectedPage) {
+                    // The detail shows a page we auto-opened as a visual filler for the
+                    // two-pane layout; the user never chose it, so a rotation round trip
+                    // must end back at the root list.
+                    fieldFocusEnabled = false
+                    navigator.navigateBack()
+                    pagePath = emptyList()
+                    delay(400)
+                    fieldFocusEnabled = true
+                } else if (lastActivePane != ActivePane.List) {
                     // The detail was in use (or focus was never observed, e.g. right after
                     // launch in two-pane), so keep it visible in single-pane too.
                     (navigator.scaffoldState as? MutableThreePaneScaffoldState)
@@ -405,6 +425,11 @@ public fun PreferencePageScreen(
                 // the focus system does not put focus (and the keyboard) back on it.
                 fieldFocusEnabled = false
                 navigator.navigateBack()
+                // The user walked back to the root list (the nested levels were already
+                // popped above, so only a root-level page is open here). Forget the
+                // selection so a later size round trip stays at the root too.
+                pagePath = emptyList()
+                userSelectedPage = false
                 delay(400)
                 fieldFocusEnabled = true
             }
