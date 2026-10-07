@@ -86,7 +86,7 @@ data class SampleThemeValues(
 }
 
 /**
- * The selectable accent colors, shown as the "Accent color" row. A null [hex] means the
+ * The selectable accent colors, shown as the "Color" row. A null [hex] means the
  * platform default (dynamic colors on Android 12+); otherwise [hex] is the fixed seed.
  */
 @Immutable

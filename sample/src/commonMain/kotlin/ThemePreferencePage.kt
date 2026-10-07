@@ -16,13 +16,17 @@
 package net.slions.compose.preference.sample
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,8 +34,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import net.slions.compose.preference.ListPreference
 import net.slions.compose.preference.ListPreferenceType
@@ -72,13 +78,13 @@ fun themePreferencePage(
                     value = values.accent ?: "",
                     onValueChange = { onValuesChange(values.copy(accent = it.ifEmpty { null })) },
                     values = SampleThemeValues.ACCENT_PRESETS,
-                    title = "Accent color",
+                    title = "Color",
                     summary = accentNameOf(values.accent),
                 )
             }
             card {
                 ThemeSlider(
-                    title = "Neutral tint",
+                    title = "Tint",
                     value = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT).toFloat(),
                     onValueChange = { onValuesChange(values.copy(tintFactorPercent = it.toInt())) },
                     valueRange = TINT_FACTOR_RANGE.first.toFloat()..TINT_FACTOR_RANGE.last.toFloat(),
@@ -186,36 +192,44 @@ private fun AccentList(
         summary = summary,
         valueToText = { AnnotatedString(accentNameOf(it.ifEmpty { null })) },
         item = { accentHex, currentValue, onClick ->
-            // M3 ListItem isn't clickable on its own; wrap the swatch row in a clickable
-            // container so tapping it confirms the choice.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick),
+            val selected = accentHex == currentValue
+            // The swatch color is also used to tint the radio button, so each row reads
+            // "this color" — matching the Mode dialog's selectable row (background highlight).
+            val accentColor =
+                if (accentHex.isEmpty()) MaterialTheme.colorScheme.primary
+                else parseHexColor(accentHex)
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(selected, true, Role.RadioButton, onClick = onClick)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                ListItem(
-                    headlineContent = {
-                        Text(accentNameOf(accentHex.ifEmpty { null }))
-                    },
-                    leadingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .background(
-                                    if (accentHex.isEmpty()) {
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                    } else {
-                                        parseHexColor(accentHex)
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                ),
-                        )
-                    },
-                    trailingContent = {
-                        if (accentHex == currentValue) {
-                            Checkbox(checked = true, onCheckedChange = null)
-                        }
-                    },
+                RadioButton(
+                    selected = selected,
+                    onClick = null,
+                    colors = RadioButtonDefaults.colors(selectedColor = accentColor),
+                )
+                Spacer(modifier = Modifier.width(24.dp))
+                Text(
+                    text = accentNameOf(accentHex.ifEmpty { null }),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Box(
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .background(
+                                if (accentHex.isEmpty()) {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                } else {
+                                    accentColor
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                            ),
                 )
             }
         },
