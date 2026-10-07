@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CornerSize
 import kotlinx.coroutines.flow.first
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -414,6 +416,22 @@ public fun PreferencePageScreen(
     // snapshotFlow because reading them directly in composition does not reliably
     // schedule a recomposition.
     val listState = remember { LazyListState() }
+    // Keep the list pane showing the page currently open in the detail: when the row set
+    // changes (popping up the tree in two-pane, opening a page from a search result), the
+    // pane's scroll offset would otherwise be left stale — e.g. scrolled past the end of a
+    // new, shorter list, with the selected row out of view.
+    LaunchedEffect(selectedPageId, listRows, isSearching) {
+        if (isSearching) return@LaunchedEffect
+        val sel = selectedPageId ?: return@LaunchedEffect
+        // Item 0 is the search pill; the page rows follow from index 1.
+        val target = 1 + listRows.indexOfFirst { it.id == sel }
+        if (target < 1) return@LaunchedEffect
+        // The list is recomposed with the new rows asynchronously; wait until the target
+        // row exists before scrolling to it (same pattern as the detail pane).
+        snapshotFlow { listState.layoutInfo.totalItemsCount }
+            .first { it > target }
+        listState.animateScrollToItem(target)
+    }
     val detailState = rememberLazyListState()
     val barHeightPx = with(LocalDensity.current) { 56.dp.toPx() }
     fun headerProgress(state: LazyListState, distancePx: Float): Float =
@@ -701,32 +719,75 @@ public fun PreferencePageScreen(
                                         }
                                     }
                                 } else {
-                                    item {
-                                        Spacer(Modifier.height(8.dp))
-                                        // The page rows are each drawn in their own card,
-                                        // with the first and last showing rounded
-                                        // top/bottom corners. The rows are the children of
-                                        // the page currently shown in the detail pane
-                                        // (the top-level pages while at the root).
-                                        PreferenceCardGroup(
-                                            items = listRows.map {
-                                                page ->
-                                                    PreferenceCardItem(
-                                                        title = page.title,
-                                                        summary = page.summary,
-                                                        content = {
-                                                            PreferencePageRow(
-                                                                page = page,
-                                                                selected =
-                                                                    page.id == selectedPageId,
-                                                                onClick = {
-                                                                    selectPageById(page.id)
-                                                                },
-                                                            )
-                                                        },
-                                                    )
+                                    // The page rows are each drawn in their own card, with
+                                    // the first and last showing rounded top/bottom corners
+                                    // (mirroring PreferenceCardGroup). They are the children
+                                    // of the page currently shown in the detail pane (the
+                                    // top-level pages while at the root). Each row is its
+                                    // own lazy item — not one group item — so the pane can
+                                    // scroll to the selected row (e.g. after popping up the
+                                    // tree in two-pane, when the row set changes).
+                                    items(listRows.size, key = { listRows[it].id }) {
+                                        index ->
+                                        val page = listRows[index]
+                                        val horizontalSpacing =
+                                            LocalPreferenceTheme.current.horizontalSpacing
+                                        val cardShape = MaterialTheme.shapes.medium
+                                        val cornerSize =
+                                            (cardShape as? RoundedCornerShape
+                                                ?: RoundedCornerShape(12.dp)).topStart
+                                        Card(
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(
+                                                        // The 8.dp replaces the spacer
+                                                        // the group used to lead with;
+                                                        // the 4.dp between rows is the
+                                                        // group's item spacing.
+                                                        start = horizontalSpacing,
+                                                        top =
+                                                            if (index == 0) {
+                                                                8.dp +
+                                                                    horizontalSpacing
+                                                            } else {
+                                                                4.dp
+                                                            },
+                                                        end = horizontalSpacing,
+                                                        bottom =
+                                                            if (index ==
+                                                                listRows.lastIndex) {
+                                                                horizontalSpacing
+                                                            } else {
+                                                                0.dp
+                                                            },
+                                                    ),
+                                            shape =
+                                                when {
+                                                    listRows.size <= 1 -> cardShape
+                                                    index == 0 ->
+                                                        RoundedCornerShape(
+                                                            cornerSize,
+                                                            cornerSize,
+                                                            CornerSize(0f),
+                                                            CornerSize(0f),
+                                                        )
+                                                    index == listRows.lastIndex ->
+                                                        RoundedCornerShape(
+                                                            CornerSize(0f),
+                                                            CornerSize(0f),
+                                                            cornerSize,
+                                                            cornerSize,
+                                                        )
+                                                    else -> RoundedCornerShape(0.dp)
                                                 },
-                                        )
+                                        ) {
+                                            PreferencePageRow(
+                                                page = page,
+                                                selected = page.id == selectedPageId,
+                                                onClick = { selectPageById(page.id) },
+                                            )
+                                        }
                                     }
                                 }
                             }

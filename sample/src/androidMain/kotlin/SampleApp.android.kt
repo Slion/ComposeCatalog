@@ -19,6 +19,10 @@ package net.slions.compose.preference.sample
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import net.slions.compose.preference.PreferencePageScreen
 import net.slions.compose.preference.ProvidePreferenceLocals
 import net.slions.compose.preference.ProvidePreferenceTheme
@@ -29,6 +33,7 @@ actual fun SampleApp() {
     ProvidePreferenceLocals {
         val (themeValues, writeThemeValues) = rememberSampleThemeValues()
         val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
+        var sheetOpen by rememberSaveable { mutableStateOf(false) }
         CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
             SampleTheme(darkTheme = darkTheme) {
                 // Re-provide the preference theme *inside* SampleTheme: its default colors
@@ -39,11 +44,16 @@ actual fun SampleApp() {
                     PreferencePageScreen(
                         title = SampleTitle,
                         // The common sample pages plus a root row that opens the same tree
-                        // in a bottom sheet (Android-only, so it is added here).
+                        // in a bottom sheet in this activity (Android-only, so it is added
+                        // here).
                         pages =
                             samplePages(themeValues, writeThemeValues) +
-                                listOf(sheetSettingsPage()),
+                                listOf(sheetSettingsPage(onOpenSheet = { sheetOpen = true })),
                     )
+                    // The sheet, hosted in this activity over the full-screen screen.
+                    if (sheetOpen) {
+                        SheetSettings(onDismiss = { sheetOpen = false })
+                    }
                 }
             }
         }

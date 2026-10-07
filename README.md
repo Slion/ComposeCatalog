@@ -127,6 +127,61 @@ The default data source provided by this library (`createDefaultPreferenceFlow()
 
 If AndroidX DataStore is considered more appropriate for your use case, e.g. you need multi-process support, you can also create an AndroidX DataStore backed implementation that provides a `MutableStateFlow<Preferences>` on your own.
 
+## Settings screen
+
+[`PreferencePageScreen`](preference/src/androidMain/kotlin/PreferencePageScreen.kt) hosts a whole settings tree in a single adaptive screen: a list pane of pages with a search field, and a detail pane showing the selected page's preferences.
+
+```kotlin
+PreferencePageScreen(
+    title = "Settings",
+    pages = pages,
+    onBack = { dismiss() },
+)
+```
+
+- **Single-pane** (narrow window, e.g. a phone in portrait): selecting a page navigates to the detail pane; the top bar shows the page title with a back arrow, and system back pops the detail before dismissing the screen.
+- **Two-pane** (wide window, e.g. a tablet or an unfolded foldable): both panes are visible at once as a 50/50 split.
+- The **list pane** shows an MD3-style search pill. While a query is entered, the page list is replaced by the matching pages and preference entries; selecting a result clears the query, opens the page, and scrolls to (briefly highlights) the matched row.
+
+The screen follows the [Material 3 adaptive](https://developer.android.com/develop/ui/compose/m3/adaptive) layout, so the same code adapts across postures. It also handles **half-folded** foldables (the two panes stay exactly half each via `HingePolicy.NeverAvoid`) and **medium-width** windows (the detail pane activates there, not only at the 720dp "Expanded" class).
+
+### Nested pages
+
+A page can declare `subPages`, forming a tree of any depth:
+
+```kotlin
+PreferencePage(
+    id = "display",
+    title = "Display",
+    subPages = listOf(
+        PreferencePage(id = "display_brightness", title = "Brightness") { /* ... */ },
+    ),
+) { /* ... */ }
+```
+
+In two-pane mode the current trail is shown as a breadcrumb above the panes (tapping an ancestor jumps back to it); in single-pane mode the back arrow pops one level at a time. Page ids must be unique within the whole tree.
+
+The tree and search helpers live in [`PreferencePage.kt`](preference/src/commonMain/kotlin/PreferencePage.kt): `walkPages()`, `findPage()`, `findPagePath()`, and `searchPreferencePages()`. Search covers the entire tree: [`buildSearchIndex(pages)`](preference/src/commonMain/kotlin/SearchIndex.kt) walks every page's content (including all `subPages`) and records a searchable entry for each preference row, so `PreferencePageScreen` can filter both pages and rows and scroll to a match.
+
+### Hosting in a bottom sheet or dialog
+
+`PreferencePageScreen` reads the window's adaptive info by default. A host that is smaller than the window — a modal bottom sheet, a dialog, a split — should measure its own size, build a `WindowAdaptiveInfo` for it (with no hinges, since the fold does not apply to the host), and pass it via `adaptiveInfo`, so the screen adapts to the host rather than to the window:
+
+```kotlin
+PreferencePageScreen(
+    title = "Settings",
+    pages = pages,
+    adaptiveInfo = hostAdaptiveInfo, // host-measured, no hinges
+    singlePaneOnly = true,           // a sheet never splits into list + detail
+)
+```
+
+Set `singlePaneOnly = true` for hosts that must never split into a list + detail (a bottom sheet, a dialog): the screen stays single-pane at any width, and the list navigates to the detail and back.
+
+## Device-UI tests
+
+The `sample` app doubles as the test fixture for the library's screen behavior. A small device-UI suite, built on the [AutoTest](https://github.com/Slion/AutoTest) framework, drives the installed sample over adb and asserts on the live UI hierarchy — nested navigation, breadcrumbs, bottom-sheet single-pane hosting, and search. See [`tools/autotest/`](tools/autotest/README.md) for setup and how to run it.
+
 ## Credits
 
 Forked from [zhanghai/ComposePreference](https://github.com/zhanghai/ComposePreference).

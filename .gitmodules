@@ -1,0 +1,3 @@
+[submodule "AutoTest"]
+	path = AutoTest
+	url = https://github.com/Slion/AutoTest.git

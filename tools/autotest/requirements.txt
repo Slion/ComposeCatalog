@@ -1,0 +1,3 @@
+# Runtime dependency for the AutoTest results recorder. The framework itself is
+# pure stdlib; adb must be on PATH (not a Python package).
+PyYAML>=6.0

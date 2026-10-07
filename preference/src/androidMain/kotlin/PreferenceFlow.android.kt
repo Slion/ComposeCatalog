@@ -18,6 +18,7 @@ package net.slions.compose.preference
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -30,17 +31,38 @@ import kotlinx.coroutines.launch
 @Volatile
 public var isDefaultPreferenceFlowAndroidLongSupportEnabled: Boolean = false
 
+/**
+ * The process-wide default flow, created once per process.
+ *
+ * Sharing a single flow across the whole process (rather than one per activity) is what keeps
+ * several activities of the same app — e.g. a full-screen settings host and a bottom-sheet
+ * settings host — in sync: they read the same in-memory state, so an activity that starts
+ * later shows the current values instead of re-reading (possibly stale) disk, and every
+ * activity's writes land in the same state.
+ */
+private object DefaultFlowHolder {
+    var flow: MutableStateFlow<Preferences>? = null
+}
+
 @Composable
 public actual fun createDefaultPreferenceFlow(): MutableStateFlow<Preferences> {
+    // Remembered per composition: the default argument of the `Provide*` composables is
+    // re-evaluated on every recomposition, so without this every recomposition would create
+    // a fresh flow (re-reading disk) and leak a fresh background collector.
     val view = LocalView.current
     if (view.isInEditMode) {
         return MutableStateFlow(MapPreferences())
     }
     val context = LocalContext.current
-    @Suppress("DEPRECATION")
-    return createPreferenceFlow(
-        android.preference.PreferenceManager.getDefaultSharedPreferences(context)
-    )
+    return remember {
+        synchronized(DefaultFlowHolder) {
+            @Suppress("DEPRECATION")
+            DefaultFlowHolder.flow
+                ?: createPreferenceFlow(
+                    android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                ).also { DefaultFlowHolder.flow = it }
+        }
+    }
 }
 
 public fun createPreferenceFlow(
