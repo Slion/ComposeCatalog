@@ -19,8 +19,15 @@ package net.slions.compose.preference.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        init {
+            Timber.plant(Timber.DebugTree())
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

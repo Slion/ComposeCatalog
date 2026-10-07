@@ -57,6 +57,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldDefaults
+import androidx.compose.material3.adaptive.layout.HingePolicy
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.MutableThreePaneScaffoldState
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
@@ -83,17 +84,21 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * The adaptive two-pane settings screen: a list pane of [pages] with a search field, and a
@@ -129,11 +134,45 @@ public fun PreferencePageScreen(
     // so the default directive keeps them single-pane in both portrait and landscape.
     // A settings list of short page titles is comfortably usable in a medium-width window,
     // so use the "two panes on medium width" variant to activate the detail pane there too.
+    //
+    // HingePolicy.NeverAvoid: the default (AvoidSeparating) inserts the separating fold
+    // hinge as an excluded bound, so in half-folded portrait the scaffold snaps the
+    // pane divider onto the crease and the list pane grows past 50%. With NeverAvoid the
+    // two preferredWidth(0.5f) panes stay exactly half each in every fold state.
     val directive =
         remember(windowAdaptiveInfo) {
-            calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(windowAdaptiveInfo)
+            calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(
+                windowAdaptiveInfo = windowAdaptiveInfo,
+                verticalHingePolicy = HingePolicy.NeverAvoid,
+            )
         }
     val isTwoPane = directive.maxHorizontalPartitions >= 2
+
+    // Fold-debug logging: record the actual measured pane widths so we can compare the
+    // scaffold's input (window size + fold posture) against what it produced on each
+    // fold transition. Filter logcat by "PrefPageFold".
+    val logTag = "PrefPageFold"
+    var listPaneSize by remember { mutableStateOf(IntSize.Zero) }
+    var detailPaneSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val containerSize = LocalWindowInfo.current.containerSize
+    LaunchedEffect(containerSize, windowAdaptiveInfo, isTwoPane) {
+        Timber.d(
+            "$logTag: IN  window=${containerSize.width}x${containerSize.height}px " +
+                "wsc=${windowAdaptiveInfo.windowSizeClass} " +
+                "posture=${windowAdaptiveInfo.windowPosture} " +
+                "maxParts=${directive.maxHorizontalPartitions} twoPane=$isTwoPane"
+        )
+    }
+    LaunchedEffect(listPaneSize, detailPaneSize) {
+        if (listPaneSize != IntSize.Zero || detailPaneSize != IntSize.Zero) {
+            Timber.d(
+                "$logTag: OUT listPx=${listPaneSize.width} detailPx=${detailPaneSize.width} " +
+                    "sum=${listPaneSize.width + detailPaneSize.width}"
+            )
+        }
+    }
+
     val navigator =
         rememberListDetailPaneScaffoldNavigator<String>(
             scaffoldDirective = directive,
@@ -370,7 +409,16 @@ public fun PreferencePageScreen(
                 scaffoldState = navigator.scaffoldState,
                 listPane = {
                     AnimatedPane {
-                        Box(Modifier.fillMaxSize().then(trackPaneFocus(ActivePane.List))) {
+                        // Keep the list pane at exactly half the window so both halves stay
+                        // equal in portrait regardless of fold angle; the detail pane
+                        // (higher priority) absorbs the remaining width.
+                        Box(
+                            Modifier
+                                .preferredWidth(0.5f)
+                                .fillMaxSize()
+                                .onSizeChanged { listPaneSize = it }
+                                .then(trackPaneFocus(ActivePane.List)),
+                        ) {
                             LazyColumn(
                                 state = listState,
                                 // In single-pane the fixed 56dp header overlays the top of
@@ -608,9 +656,15 @@ public fun PreferencePageScreen(
                             CompositionLocalProvider(
                                 LocalHighlightedPreferenceKey provides highlightedKey,
                             ) {
+                                // Mirror the list pane's 0.5f proportion so both halves
+                                // always sum to the full width and the scaffold never
+                                // has to scale them unequally (keeps the split 50/50 at
+                                // any fold angle).
                                 Box(
                                     Modifier
+                                        .preferredWidth(0.5f)
                                         .fillMaxSize()
+                                        .onSizeChanged { detailPaneSize = it }
                                         .then(trackPaneFocus(ActivePane.Detail)),
                                 ) {
                                     // The detail state is shared across pages, so a page
