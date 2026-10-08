@@ -1,0 +1,273 @@
+classDiagram
+direction LR
+
+%% ===== Screen (top-level composable) =====
+class PreferencePageScreen {
+  <<composable - screen>>
+  +title: String
+  +pages: List~PreferencePage~
+  +rootContent: ContentBuilder
+  +adaptiveInfo: WindowAdaptiveInfo?
+  +singlePaneOnly: Boolean
+  +options: PreferencePageScreenOptions
+  +onBack: OnBack
+}
+
+class PreferencePageScreenOptions {
+  +hingePolicy: HingePolicy
+  +twoPanesOnMediumWidth: Boolean
+  +fadingEdges: Boolean
+}
+
+class ScreenAdaptive {
+  <<internal>>
+  +isTwoPane: Boolean
+  +directive: PaneScaffoldDirective
+  rememberScreenAdaptive()*
+  quantizedAdaptiveInfo()*
+  paneScaffoldDirective()*
+}
+
+class ListPane {
+  <<composable - internal>>
+}
+class DetailPane {
+  <<composable - internal>>
+}
+class SearchPill {
+  <<composable - internal>>
+}
+class BreadcrumbBar {
+  <<composable - internal>>
+}
+class SearchEntry {
+  <<data - internal>>
+  +id: Int
+  +page: PreferencePage?
+  +path: String
+  +entry: SearchIndexEntry?
+}
+
+%% ===== Page model =====
+class PreferencePage {
+  <<data - model>>
+  +id: String
+  +title: String
+  +summary: String?
+  +icon: Composable?
+  +subPages: List~PreferencePage~
+  +onClick: OnClick?
+  +contentVersion: Int
+  +content: ContentBuilder
+  walkPages()*
+  findPage(pages, id)*
+  findPagePath(pages, id)*
+  searchPreferencePages(pages, index, query)*
+}
+
+class PageMatch {
+  <<data - search result>>
+  +page: PreferencePage
+  +matches: List~SearchIndexEntry~
+}
+
+%% ===== Search =====
+class SearchIndex {
+  <<static functions>>
+  buildSearchIndex(pages)*
+  buildSearchIndex(rootContent)*
+}
+class SearchIndexEntry {
+  <<data>>
+  +key: String?
+  +title: String
+  +summary: String?
+  +index: Int
+  +titleLowercase: String
+  +summaryLowercase: String?
+}
+
+%% ===== State / persistence =====
+class Preferences {
+  <<interface>>
+  +get(key): T?
+  +asMap(): Map~String, Any~
+  +toMutablePreferences(): MutablePreferences
+}
+class MutablePreferences {
+  <<interface>>
+  +set(key, value: T?)
+  +remove(key)
+  +clear()
+}
+class MapPreferences
+class MutableMapPreferences
+
+class PreferenceFlow {
+  <<state flow>>
+  LocalPreferenceFlow
+  createDefaultPreferenceFlow()*
+  createPreferenceFlow()*
+  ProvidePreferenceFlow()*
+  rememberPreferenceState(key)*
+}
+
+%% ===== Theming =====
+class PreferenceTheme {
+  +categoryPadding: PaddingValues
+  +categoryColor: Color
+  +padding: PaddingValues
+  +titleColor: Color
+  +titleTextStyle: TextStyle
+  +summaryColor: Color
+  +summaryTextStyle: TextStyle
+  +dividerHeight: Dp
+  preferenceTheme()*
+  LocalPreferenceTheme
+}
+
+%% ===== Row widgets (each = LazyListScope builder + Composable) =====
+class PreferenceRow {
+  <<composable - row family>>
+}
+class BasicPreference {
+  <<composable>>
+}
+class CheckboxPreference {
+  <<composable>>
+}
+class SwitchPreference {
+  <<composable>>
+}
+class RadioButtonPreference {
+  <<composable>>
+}
+class SliderPreference {
+  <<composable>>
+}
+class TextFieldPreference {
+  <<composable>>
+}
+class ListPreference {
+  <<composable>>
+}
+class MultiSelectListPreference {
+  <<composable>>
+}
+class TwoTargetPreference {
+  <<composable>>
+}
+class TwoTargetIconButtonPreference {
+  <<composable>>
+}
+class TwoTargetSwitchPreference {
+  <<composable>>
+}
+class FooterPreference {
+  <<composable>>
+}
+class PreferenceCategory {
+  <<composable - header>>
+}
+class LiveSliderPreference {
+  <<composable - theme sample>>
+}
+class ColorPreference {
+  <<composable - theme sample>>
+}
+class AccentColorOption {
+  <<data>>
+}
+
+%% ===== Card =====
+class PreferenceCardStyle {
+  <<sealed>>
+  Filled
+  Elevated
+  Outlined
+}
+class PreferenceCardItem {
+  <<data>>
+  +title: String
+  +summary: String?
+  +icon: Composable?
+  +value: String
+}
+class PreferenceCardRow {
+  <<data>>
+  +items: List~PreferenceCardItem~
+}
+class PreferenceCardGroup {
+  <<composable>>
+}
+class PreferenceCardScope {
+  <<dsl scope>>
+}
+class PreferenceCardGroupScope {
+  <<dsl scope>>
+}
+
+%% ===== External (material3-adaptive) =====
+class WindowAdaptiveInfo {
+  <<external - m3 adaptive>>
+}
+class HingePolicy {
+  <<external - m3 adaptive>>
+}
+
+%% ===== Relationships =====
+MutablePreferences --|> Preferences
+MapPreferences --|> Preferences
+MutableMapPreferences --|> MutablePreferences
+
+PreferencePageScreen --> PreferencePage : pages
+PreferencePageScreen --> PreferencePageScreenOptions : options
+PreferencePageScreenOptions --> HingePolicy : hingePolicy
+PreferencePageScreen ..> ScreenAdaptive : remembers
+PreferencePageScreen ..> PreferenceTheme : consumes
+PreferencePageScreen ..> SearchIndex : builds
+PreferencePageScreen o-- ListPane : composes
+PreferencePageScreen o-- DetailPane : composes
+ListPane o-- SearchPill : composes
+ListPane ..> BreadcrumbBar : single-pane
+ListPane ..> SearchEntry : search results
+DetailPane ..> SearchEntry : search results
+DetailPane ..> PreferencePage : renders content
+SearchPill ..> SearchEntry : submits
+
+PreferencePage --> PreferencePage : subPages
+PageMatch --> PreferencePage : page
+PageMatch --> SearchIndexEntry : matches
+SearchIndex ..> SearchIndexEntry : builds
+SearchIndex ..> PreferencePage : walks
+SearchEntry ..> SearchIndexEntry : entry
+
+CheckboxPreference ..> PreferenceFlow : reads state
+SliderPreference ..> PreferenceFlow : reads state
+TextFieldPreference ..> PreferenceFlow : reads state
+PreferenceRow ..> PreferenceTheme : styled by
+PreferenceRow ..> PreferenceFlow : reads state
+DetailPane ..> PreferenceRow : renders rows
+
+BasicPreference --|> PreferenceRow : is a
+CheckboxPreference --|> PreferenceRow : is a
+SwitchPreference --|> PreferenceRow : is a
+RadioButtonPreference --|> PreferenceRow : is a
+SliderPreference --|> PreferenceRow : is a
+TextFieldPreference --|> PreferenceRow : is a
+ListPreference --|> PreferenceRow : is a
+MultiSelectListPreference --|> PreferenceRow : is a
+TwoTargetPreference --|> PreferenceRow : is a
+TwoTargetIconButtonPreference --|> PreferenceRow : is a
+TwoTargetSwitchPreference --|> PreferenceRow : is a
+FooterPreference --|> PreferenceRow : is a
+PreferenceCategory --|> PreferenceRow : is a
+
+PreferenceCardGroup ..> PreferenceCardScope : dsl
+PreferenceCardGroup ..> PreferenceCardGroupScope : dsl
+PreferenceCardGroup ..> PreferenceCardStyle : style
+PreferenceCardRow --> PreferenceCardItem : items
+PreferenceCardRow --|> PreferenceRow : is a
+LiveSliderPreference --|> PreferenceRow : is a
+ColorPreference --|> PreferenceRow : is a
+ColorPreference ..> AccentColorOption : options
