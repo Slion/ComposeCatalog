@@ -24,4 +24,4 @@ pluginManagement {
 
 rootProject.name = "ComposePreference"
 
-include(":preference", ":sample", ":androidSample")
+include(":preference", ":sample", ":androidSample", ":benchmark")

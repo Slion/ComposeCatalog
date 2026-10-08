@@ -15,59 +15,48 @@
  */
 
 plugins {
-    alias(libs.plugins.android.kotlinMultiplatformLibrary)
-    alias(libs.plugins.compose)
-    alias(libs.plugins.dokka)
-    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.plugin.compose)
-    alias(libs.plugins.kotlinx.binaryCompatibilityValidator)
+    alias(libs.plugins.dokka)
     alias(libs.plugins.mavenPublish)
 }
 
+android {
+    namespace = "net.slions.compose.preference"
+    buildToolsVersion = libs.versions.android.buildTools.get()
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    defaultConfig { minSdk = libs.versions.android.minSdk.get().toInt() }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    // Match the app's benchmark build type so the :benchmark variant resolves this
+    // library (see the :benchmark macrobenchmark module).
+    buildTypes {
+        create("benchmark")
+    }
+
+    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+}
+
 kotlin {
-    explicitApi()
+    compilerOptions { explicitApi() }
+}
 
-    // Android-only: this library targets the Android platform exclusively.
-    android {
-        namespace = "net.slions.compose.preference"
-        buildToolsVersion = libs.versions.android.buildTools.get()
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        androidResources { enable = true }
-        optimization {
-            consumerKeepRules.apply {
-                publish = true
-                file("consumer-proguard-rules.pro")
-            }
-        }
-        packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
-    }
-
-    sourceSets {
-        commonMain {
-            dependencies {
-                // TODO: Migrate away from deprecated dependency aliases once they have a BOM for
-                //  compatible versions.
-                implementation(compose.components.resources)
-                implementation(compose.material3)
-                // The extended artifact transitively provides the core icon set
-                // (androidx.compose.material.icons.Icons).
-                implementation(compose.materialIconsExtended)
-                implementation(libs.jetbrains.androidx.lifecycle.runtimeCompose)
-            }
-        }
-        androidMain {
-            dependencies {
-                implementation(libs.androidx.activity.compose)
-                // Exposed with api (not implementation): WindowAdaptiveInfo is part of the
-                // library's public API (PreferencePageScreen.adaptiveInfo), so consumers must
-                // have it on their compile classpath to pass a value.
-                api(libs.androidx.material3.adaptive)
-                api(libs.androidx.material3.adaptive.layout)
-                api(libs.androidx.material3.adaptive.navigation)
-                implementation(libs.timber)
-            }
-        }
-        commonTest { dependencies { implementation(libs.kotlin.test) } }
-    }
+dependencies {
+    implementation(libs.androidx.compose.material3)
+    // The extended artifact transitively provides the core icon set
+    // (androidx.compose.material.icons.Icons).
+    implementation(libs.androidx.compose.materialIconsExtended)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
+    implementation(libs.androidx.activity.compose)
+    // Exposed with api (not implementation): WindowAdaptiveInfo is part of the
+    // library's public API (PreferencePageScreen.adaptiveInfo), so consumers must
+    // have it on their compile classpath to pass a value.
+    api(libs.androidx.material3.adaptive)
+    api(libs.androidx.material3.adaptive.layout)
+    api(libs.androidx.material3.adaptive.navigation)
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

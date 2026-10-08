@@ -50,6 +50,14 @@ android {
             )
             signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
         }
+        // Non-debuggable, non-minified build for macrobenchmarking (see :benchmark):
+        // representative frame timing without R8, signed with the local debug key so it
+        // builds without the release keystore env vars.
+        create("benchmark") {
+            isDebuggable = false
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 }
 

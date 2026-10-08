@@ -3,7 +3,7 @@
 Device-UI tests for the `sample` app, which doubles as the fixture for the
 library's screen behavior. Built on the
 [AutoTest](https://github.com/Slion/AutoTest) framework (a git submodule at
-[`../../AutoTest`](../../AutoTest)): the framework is app-agnostic, and this
+[`../../subs/AutoTest`](../../subs/AutoTest)): the framework is app-agnostic, and this
 directory holds the **app profile** and the **tests** for the Compose Preference
 sample.
 
@@ -22,7 +22,7 @@ sample.
 2. Init the framework submodule and install the one dependency:
 
    ```sh
-   git submodule update --init AutoTest
+   git submodule update --init subs/AutoTest
    pip install -r tools/autotest/requirements.txt   # PyYAML
    ```
 

@@ -104,10 +104,25 @@ class PreferenceDevice(AndroidDevice):
             ["shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(ms)])
         time.sleep(0.6)
 
+    def _find_tappable(self, text: str):
+        """First node with exact ``text`` and a non-zero area, else None.
+
+        A freshly composed (but not yet laid-out) node reports bounds of
+        ``[0,0][0,0]``; its center is ``(0, 0)``, which is truthy — tapping it
+        is a phantom tap in the status-bar corner that changes nothing.
+        """
+        for node in self.nodes():
+            if node.text != text or not node.bounds:
+                continue
+            x1, y1, x2, y2 = node.bounds
+            if x2 > x1 and y2 > y1:
+                return node
+        return None
+
     def _tap_visible(self, text: str) -> bool:
         """Tap a node with exact ``text`` if it is currently visible; else False."""
-        node = self.find_node_by_text(text)
-        if node and node.center:
+        node = self._find_tappable(text)
+        if node is not None:
             self.tap(*node.center)
             return True
         return False
@@ -134,11 +149,46 @@ class PreferenceDevice(AndroidDevice):
     def search(self, query: str) -> None:
         """Focus the list-pane search pill and type ``query``.
 
-        The empty pill shows the placeholder text ``"Search"``; tapping it focuses
-        the underlying field. Falls back to tapping the pill's location near the
-        top of the list pane when the placeholder is not a tappable node.
+        The pill's ``"Search"`` placeholder is not its own accessibility node,
+        so the field is targeted by class (the list pane's
+        ``android.widget.EditText``); a positional tap near the top of the list
+        pane covers a field that is not in the tree yet.
         """
-        if not self.tap_text("Search", timeout=2.0):
+        node = next(
+            (n for n in self.nodes()
+             if n.cls == "android.widget.EditText" and n.bounds
+             and n.bounds[2] > n.bounds[0] and n.bounds[3] > n.bounds[1]),
+            None)
+        if node is None:
             w, h = self.screen_size()
             self.tap(max(80, w // 4), int(h * 0.14))
-        self.type_text(query)
+        else:
+            self.tap(*node.center)
+        # The IME may drop or auto-correct a character while the keys are
+        # injected ("deveoper" for "developer"); the app searches on the
+        # committed field text, so verify it and retype (after clearing) if
+        # the query did not land intact.
+        self._type_slow(query)
+        for _ in range(2):
+            committed = next(
+                (n.text for n in self.nodes() if n.cls == "android.widget.EditText"),
+                "")
+            if query in committed:
+                return
+            self.clear_field()
+            self._type_slow(query)
+
+    def _type_slow(self, text: str, per_char_delay: float = 0.2) -> None:
+        """Type character by character.
+
+        Bulk ``input text`` injection races aggressive IME prediction (the LG
+        IME auto-completes mid-word and drops a character); per-key injection
+        with a small gap lands the text intact.
+        """
+        import time
+
+        for ch in text:
+            payload = " " if ch == " " else ch
+            self.transport.shell(
+                ["shell", "input", "text", f"'{payload}'"])
+            time.sleep(per_char_delay)

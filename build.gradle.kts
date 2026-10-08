@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
-
 plugins {
     alias(libs.plugins.android.application).apply(false)
-    alias(libs.plugins.android.kotlinMultiplatformLibrary).apply(false)
-    alias(libs.plugins.compose).apply(false)
+    alias(libs.plugins.android.library).apply(false)
+    alias(libs.plugins.android.test).apply(false)
     alias(libs.plugins.dokka).apply(false)
-    alias(libs.plugins.kotlin.jvm).apply(false)
-    alias(libs.plugins.kotlin.multiplatform).apply(false)
     alias(libs.plugins.kotlin.plugin.compose).apply(false)
-    alias(libs.plugins.kotlinx.binaryCompatibilityValidator).apply(false)
     alias(libs.plugins.mavenPublish).apply(false)
 }
 
@@ -35,19 +27,5 @@ subprojects {
     repositories {
         google()
         mavenCentral()
-    }
-
-    tasks.withType<JavaCompile> {
-        sourceCompatibility = JavaVersion.VERSION_11.toString()
-        targetCompatibility = JavaVersion.VERSION_11.toString()
-    }
-    tasks.withType<KotlinJvmCompile> {
-        compilerOptions {
-            jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
-            jvmTarget = JvmTarget.JVM_11
-        }
-    }
-    tasks.withType<KotlinCompilationTask<*>> {
-        compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
     }
 }

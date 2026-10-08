@@ -3,7 +3,7 @@
 
 A thin wrapper over the AutoTest framework: it builds the sample app's
 :class:`~autotest.Suite` and runs it. The framework is imported from the
-``AutoTest`` submodule at the repo root (bootstrapped below), and the app
+``subs/AutoTest`` submodule at the repo root (bootstrapped below), and the app
 profile / tests live next to this file.
 
 Examples::
@@ -23,7 +23,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parent.parent
-_FRAMEWORK = _REPO_ROOT / "AutoTest"
+_FRAMEWORK = _REPO_ROOT / "subs" / "AutoTest"
 for _p in (str(_HERE), str(_FRAMEWORK)):
     if Path(_p).is_dir() and _p not in sys.path:
         sys.path.insert(0, _p)

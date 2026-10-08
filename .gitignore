@@ -4,5 +4,6 @@
 /build/
 /captures/
 /local.properties
+/.temp/
 .DS_Store
 *.iml
