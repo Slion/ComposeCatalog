@@ -37,6 +37,10 @@ import androidx.compose.runtime.Composable
  * The tree can nest to any depth; page ids must be unique within the whole tree. It is
  * declared before [content] so that existing trailing-lambda call sites (`PreferencePage(id,
  * title) { ... }`) still bind their lambda to [content].
+ * @property onClick Optional action for a row that does not open a page of its own
+ * (e.g. an entry that launches a separate screen or activity): when set, tapping the row —
+ * in the list pane, in a parent page's sub-page list, or in the search results — invokes
+ * it instead of navigating to the detail. The two-pane auto-open skips such pages.
  */
 public data class PreferencePage(
     public val id: String,
@@ -44,6 +48,7 @@ public data class PreferencePage(
     public val summary: String? = null,
     public val icon: @Composable (() -> Unit)? = null,
     public val subPages: List<PreferencePage> = emptyList(),
+    public val onClick: (() -> Unit)? = null,
     public val content: LazyListScope.() -> Unit,
 )
 

@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -131,6 +131,9 @@ private const val LOG_TAG = "PrefPageFold"
  * @param modifier Modifier applied to the root surface.
  * @param onBack Called when the host should dismiss the screen (i.e. system back while the
  * list pane is on screen in a single-pane layout).
+ * @param backEnabled Whether the screen's system-back handling is active. A host that
+ * covers the screen with its own layer (e.g. a fragment or view shown over it) passes
+ * false so that back goes to that layer — and its back stack — first.
  * @param adaptiveInfo Adaptive layout info computed for the host of the screen instead of
  * for the window. The screen's adaptive layout (single- vs two-pane) follows this value,
  * which is what a host smaller than the window — e.g. a modal bottom sheet, a dialog, or a
@@ -148,6 +151,7 @@ public fun PreferencePageScreen(
     pages: List<PreferencePage>,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
+    backEnabled: Boolean = true,
     adaptiveInfo: WindowAdaptiveInfo? = null,
     singlePaneOnly: Boolean = false,
 ) {
@@ -334,7 +338,12 @@ public fun PreferencePageScreen(
         val onDetail = navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail
         when {
             isTwoPane && !onDetail -> {
-                val id = navigator.currentDestination?.contentKey ?: pages.first().id
+                // A page with its own onClick is an action row, not a viewable page: the
+                // auto-open filler skips it so the detail does not show its (empty) content.
+                val id =
+                    navigator.currentDestination?.contentKey
+                        ?: pages.firstOrNull { it.onClick == null }?.id
+                        ?: pages.first().id
                 pagePath = pathOf(id)
                 navigator.navigateTo(
                     pane = ListDetailPaneScaffoldRole.Detail,
@@ -439,7 +448,9 @@ public fun PreferencePageScreen(
     }
 
     // System back: the scaffold pops detail -> list first, then the host leaves the screen.
-    BackHandler(onBack = ::backAction)
+    // A host that covers the screen with its own layer disables this so that back goes to
+    // that layer (and its back stack) first.
+    BackHandler(enabled = backEnabled, onBack = ::backAction)
 
     val isSearching = query.isNotEmpty()
     // The search index is built once by walking each page's preference tree, so it is always
@@ -540,7 +551,9 @@ public fun PreferencePageScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        // systemBarsPadding (status + navigation bars) so an edge-to-edge host keeps the
+        // content clear of both bars while the surface fills the whole window.
+        Column(Modifier.fillMaxSize().systemBarsPadding()) {
             // A breadcrumb that spans both panes: the screen title, a separator, and the
             // page currently shown in the detail pane. Only present in two-pane mode, where
             // there is room to show the navigation trail; in single-pane the per-pane bars
@@ -786,17 +799,24 @@ public fun PreferencePageScreen(
                                             page = entry.page,
                                             path = entry.path,
                                             onClick = {
-                                                clearQuery()
-                                                if (matchedEntry != null) {
-                                                    highlightedKey = matchedEntry.key
-                                                    // The detail column lists the page's
-                                                    // sub-page rows above its content, so
-                                                    // shift the entry's content-relative
-                                                    // index past them.
-                                                    scrollToIndex =
-                                                        matchedEntry.index + entry.page.subPages.size
+                                                if (entry.page.onClick != null) {
+                                                    // An action page: the result just
+                                                    // runs its action, no deep navigation.
+                                                    clearQuery()
+                                                    entry.page.onClick?.invoke()
+                                                } else {
+                                                    clearQuery()
+                                                    if (matchedEntry != null) {
+                                                        highlightedKey = matchedEntry.key
+                                                        // The detail column lists the page's
+                                                        // sub-page rows above its content, so
+                                                        // shift the entry's content-relative
+                                                        // index past them.
+                                                        scrollToIndex =
+                                                            matchedEntry.index + entry.page.subPages.size
+                                                    }
+                                                    selectPageById(entry.page.id)
                                                 }
-                                                selectPageById(entry.page.id)
                                             },
                                         )
                                     }
@@ -875,7 +895,9 @@ public fun PreferencePageScreen(
                                             PreferencePageRow(
                                                 page = page,
                                                 selected = page.id == selectedPageId,
-                                                onClick = { selectPageById(page.id) },
+                                                // A page with its own onClick is an action row: tapping it runs the action
+                                                // instead of navigating to the detail.
+                                                onClick = { page.onClick?.invoke() ?: selectPageById(page.id) },
                                             )
                                         }
                                     }
@@ -992,7 +1014,7 @@ public fun PreferencePageScreen(
                                                 PreferencePageRow(
                                                     page = sub,
                                                     selected = sub.id == selectedPageId,
-                                                    onClick = { selectPageById(sub.id) },
+                                                    onClick = { sub.onClick?.invoke() ?: selectPageById(sub.id) },
                                                 )
                                             }
                                         }
