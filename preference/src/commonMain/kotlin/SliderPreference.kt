@@ -36,6 +36,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -185,11 +186,13 @@ public fun SliderPreference(
     valueText: ((Float) -> String?)? = null,
     titlePostfix: @Composable (() -> Unit)? = null,
 ) {
-    var lastValue by remember { mutableFloatStateOf(value) }
+    // The live position of the thumb. It follows the finger while dragging and is synced
+    // from [sliderValue] when the caller commits a new value and the slider is idle.
+    val liveValue = remember { mutableFloatStateOf(sliderValue) }
+    val isDragging = remember { mutableStateOf(false) }
     SideEffect {
-        if (value != lastValue) {
-            onSliderValueChange(value)
-            lastValue = value
+        if (!isDragging.value && sliderValue != liveValue.floatValue) {
+            liveValue.floatValue = sliderValue
         }
     }
     val theme = LocalPreferenceTheme.current
@@ -234,24 +237,27 @@ public fun SliderPreference(
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // onValueChangeFinished() may be invoked before a recomposition has
-                    // happened for onValueChange(), for example in the clicking case, so make
-                    // onValueChange() share the latest value to onValueChangeFinished().
-                    var latestSliderValue = sliderValue
+                    // The thumb is driven by the live value, so it follows the finger while
+                    // dragging; onValueChangeFinished() reads it back, which also covers the
+                    // click case where no onValueChange() recomposition happens in between.
                     Slider(
-                        value = sliderValue,
+                        value = liveValue.floatValue,
                         onValueChange = {
+                            isDragging.value = true
+                            liveValue.floatValue = it
                             onSliderValueChange(it)
-                            latestSliderValue = it
                         },
                         modifier = Modifier.weight(1f),
                         enabled = enabled,
                         valueRange = valueRange,
                         steps = valueSteps,
-                        onValueChangeFinished = { onValueChange(latestSliderValue) },
+                        onValueChangeFinished = {
+                            isDragging.value = false
+                            onValueChange(liveValue.floatValue)
+                        },
                     )
                     valueText?.let { text ->
-                        val text = text(sliderValue)
+                        val text = text(liveValue.floatValue)
                         if (text != null) {
                             Box(modifier = Modifier.padding(start = theme.horizontalSpacing)) {
                                 Text(text = text)
