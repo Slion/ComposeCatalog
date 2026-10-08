@@ -23,23 +23,23 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SearchIndexTest {
-    private val settings = PreferencePage(
+    private val settings = Page(
         id = "settings",
         title = "Settings",
         content = {
-            switchPreference("dark", value = false, onValueChange = {}, title = "Dark theme", summary = "Use dark theme")
-            switchPreference("sound", value = true, onValueChange = {}, title = "Sounds")
+            itemSwitch("dark", value = false, onValueChange = {}, title = "Dark theme", summary = "Use dark theme")
+            itemSwitch("sound", value = true, onValueChange = {}, title = "Sounds")
         },
     )
-    private val nested = PreferencePage(
+    private val nested = Page(
         id = "nested",
         title = "Nested",
         subPages = listOf(
-            PreferencePage(
+            Page(
                 id = "nested-child",
                 title = "Nested child",
                 content = {
-                    switchPreference("wifi", value = false, onValueChange = {}, title = "Wi-Fi", summary = "Connected")
+                    itemSwitch("wifi", value = false, onValueChange = {}, title = "Wi-Fi", summary = "Connected")
                 },
             ),
         ),
@@ -70,7 +70,7 @@ class SearchIndexTest {
     @Test
     fun `buildSearchIndex of root content records the root rows`() {
         val rootContent: LazyListScope.() -> Unit = {
-            switchPreference("root-row", value = false, onValueChange = {}, title = "Root row")
+            itemSwitch("root-row", value = false, onValueChange = {}, title = "Root row")
         }
         assertEquals(
             listOf(SearchIndexEntry("root-row", "Root row", null, 0)),
@@ -80,7 +80,7 @@ class SearchIndexTest {
 
     @Test
     fun `a blank query matches only the top-level pages`() {
-        val matches = searchPreferencePages(pages, buildSearchIndex(pages), "   ")
+        val matches = searchPages(pages, buildSearchIndex(pages), "   ")
         assertEquals(listOf("settings", "nested"), matches.map { it.page.id })
         assertTrue(matches.all { it.matches.isEmpty() })
     }
@@ -88,22 +88,22 @@ class SearchIndexTest {
     @Test
     fun `search is case-insensitive on titles, summaries and page titles`() {
         val index = buildSearchIndex(pages)
-        assertEquals(listOf("settings"), searchPreferencePages(pages, index, "DARK").map { it.page.id })
-        assertEquals(listOf("settings"), searchPreferencePages(pages, index, "use dark").map { it.page.id })
-        assertEquals(listOf("nested-child"), searchPreferencePages(pages, index, "connected").map { it.page.id })
-        assertEquals(listOf("settings"), searchPreferencePages(pages, index, "sEtTiNgS").map { it.page.id })
+        assertEquals(listOf("settings"), searchPages(pages, index, "DARK").map { it.page.id })
+        assertEquals(listOf("settings"), searchPages(pages, index, "use dark").map { it.page.id })
+        assertEquals(listOf("nested-child"), searchPages(pages, index, "connected").map { it.page.id })
+        assertEquals(listOf("settings"), searchPages(pages, index, "sEtTiNgS").map { it.page.id })
     }
 
     @Test
     fun `search matches nested pages by their rows`() {
-        val matches = searchPreferencePages(pages, buildSearchIndex(pages), "wi-fi")
+        val matches = searchPages(pages, buildSearchIndex(pages), "wi-fi")
         assertEquals(listOf("nested-child"), matches.map { it.page.id })
         assertEquals(listOf("wifi"), matches.single().matches.map { it.key })
     }
 
     @Test
     fun `search returns no match for an unknown query`() {
-        assertTrue(searchPreferencePages(pages, buildSearchIndex(pages), "zzz").isEmpty())
+        assertTrue(searchPages(pages, buildSearchIndex(pages), "zzz").isEmpty())
     }
 
     @Test

@@ -22,7 +22,7 @@ import androidx.compose.runtime.Composable
 
 /**
  * Holds the [SearchIndexRecorder] of the [buildSearchIndex] walk currently in progress, so that
- * every `*Preference` builder can record itself as it registers its lazy list item.
+ * every `*Item` builder can record itself as it registers its lazy list item.
  *
  * The walk is synchronous on the composition thread, so a plain field (saved and restored
  * around each page) is sufficient; no thread confinement is required.
@@ -47,7 +47,7 @@ internal object SearchIndexer {
      * walk is in progress, so builders call it unconditionally.
      *
      * Returns the recorded [SearchIndexEntry], or null when no walk is in progress. Multi-row
-     * containers such as [preferenceCard] use it to fix up the entries' [SearchIndexEntry.index]
+     * containers such as [card] use it to fix up the entries' [SearchIndexEntry.index]
      * with the single index of their lazy list item.
      */
     fun record(key: String, title: String, summary: String? = null): SearchIndexEntry? =
@@ -92,12 +92,12 @@ public data class SearchIndexEntry(
 
 /**
  * Builds the search index of [pages] by walking each page's content — including every level
- * of [PreferencePage.subPages] — against a recording [LazyListScope]. The builders'
+ * of [Page.subPages] — against a recording [LazyListScope]. The builders'
  * registration code runs, but no item content is ever composed, so the index is always in
  * sync with the page's rows — no separate search entries to maintain. Page ids must be
  * unique within the whole tree, as they key both the index and the navigation.
  */
-public fun buildSearchIndex(pages: List<PreferencePage>): Map<String, List<SearchIndexEntry>> =
+public fun buildSearchIndex(pages: List<Page>): Map<String, List<SearchIndexEntry>> =
     pages.walkPages().associateBy({ it.id }) { page ->
         SearchIndexer.withCollector { recorder ->
             page.content(SearchIndexScope(recorder))
@@ -124,7 +124,7 @@ public fun buildSearchIndex(rootContent: LazyListScope.() -> Unit): List<SearchI
  * A pure function so it can be memoized (e.g. in `remember`) and unit-tested.
  */
 internal fun buildSearchEntries(
-    pages: List<PreferencePage>,
+    pages: List<Page>,
     matches: List<PageMatch>,
     rootIndex: List<SearchIndexEntry>,
     query: String,

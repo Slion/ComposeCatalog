@@ -31,9 +31,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
 import kotlinx.coroutines.flow.MutableStateFlow
-import net.slions.compose.preference.LocalPreferenceFlow
-import net.slions.compose.preference.MutablePreferences
-import net.slions.compose.preference.Preferences
+import net.slions.compose.preference.LocalStore
+import net.slions.compose.preference.MutableStore
+import net.slions.compose.preference.Store
 
 /**
  * The user-selectable theme properties the sample's "Theme" page can change.
@@ -126,7 +126,7 @@ internal const val DEFAULT_TINT_FACTOR_PERCENT = 5
 /** The tint-factor range, in percent, as a slider. */
 internal val TINT_FACTOR_RANGE: IntRange = 0..50
 
-// Preference keys the theme values are persisted under. Only primitive types (Int/String) are
+// Item keys the theme values are persisted under. Only primitive types (Int/String) are
 // stored, matching what the default preference flow can serialize on every platform.
 private const val KEY_THEME_MODE = "sample.theme.mode"
 private const val KEY_ACCENT = "sample.theme.accent"
@@ -136,10 +136,10 @@ private const val KEY_TINT_FACTOR = "sample.theme.tintFactor"
 private const val KEY_FONT_FAMILY = "sample.theme.fontFamily"
 
 /**
- * Rebuilds a [SampleThemeValues] from a [Preferences] store. Unset or invalid entries fall
+ * Rebuilds a [SampleThemeValues] from a [Store] store. Unset or invalid entries fall
  * back to the built-in default for that field.
  */
-private fun SampleThemeValues.Companion.fromPrefs(prefs: Preferences): SampleThemeValues =
+private fun SampleThemeValues.Companion.fromPrefs(prefs: Store): SampleThemeValues =
     SampleThemeValues(
         themeMode = prefs.getString(KEY_THEME_MODE)?.let { name ->
             SampleThemeMode.entries.firstOrNull { it.name == name }
@@ -151,12 +151,12 @@ private fun SampleThemeValues.Companion.fromPrefs(prefs: Preferences): SampleThe
         fontFamily = prefs.getString(KEY_FONT_FAMILY),
     )
 
-private fun Preferences.getString(key: String): String? = this[key]
+private fun Store.getString(key: String): String? = this[key]
 
-private fun Preferences.getInt(key: String): Int? = this[key]
+private fun Store.getInt(key: String): Int? = this[key]
 
-/** Writes this [SampleThemeValues] into a [MutablePreferences] store (nulls are removed). */
-private fun SampleThemeValues.writeTo(prefs: MutablePreferences) {
+/** Writes this [SampleThemeValues] into a [MutableStore] store (nulls are removed). */
+private fun SampleThemeValues.writeTo(prefs: MutableStore) {
     prefs[KEY_THEME_MODE] = themeMode.name
     prefs[KEY_ACCENT] = accent
     prefs[KEY_CORNER_RADIUS] = cornerRadiusDp
@@ -174,12 +174,12 @@ private fun SampleThemeValues.writeTo(prefs: MutablePreferences) {
  */
 @Composable
 internal fun rememberSampleThemeValues(
-    flow: MutableStateFlow<Preferences> = LocalPreferenceFlow.current,
+    flow: MutableStateFlow<Store> = LocalStore.current,
 ): Pair<SampleThemeValues, (SampleThemeValues) -> Unit> {
     val store = flow.collectAsState().value
     val values = remember(store) { SampleThemeValues.fromPrefs(store) }
     val write: (SampleThemeValues) -> Unit = { next ->
-        flow.value = flow.value.toMutablePreferences().apply { next.writeTo(this) }
+        flow.value = flow.value.toMutableStore().apply { next.writeTo(this) }
     }
     return values to write
 }

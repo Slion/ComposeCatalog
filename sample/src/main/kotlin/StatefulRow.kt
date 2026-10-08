@@ -20,11 +20,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import net.slions.compose.preference.rememberPreferenceState
+import net.slions.compose.preference.rememberValue
 
 /**
- * The sample's version of the library's stateful `*Preference` builders: it remembers a
- * [defaultValue] by [key] (via the same [rememberPreferenceState] the library's own stateful
+ * The sample's version of the library's stateful `*Item` builders: it remembers a
+ * [defaultValue] by [key] (via the same [rememberValue] the library's own stateful
  * builders use) and feeds the composable, value-based [row] with the current value and a change
  * handler, so the sample exercises both API styles (stateful builders and value-based
  * composables).
@@ -35,7 +35,7 @@ fun <T> LazyListScope.statefulRow(
     row: @Composable (value: T, onValueChange: (T) -> Unit) -> Unit,
 ) {
     item(key = key, contentType = "Stateful") {
-        val state = rememberPreferenceState(key, defaultValue)
+        val state = rememberValue(key, defaultValue)
         val value by state
         row(value) { state.value = it }
     }

@@ -46,11 +46,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyListScope
-import net.slions.compose.preference.PreferencePage
-import net.slions.compose.preference.PreferencePageScreen
+import net.slions.compose.preference.Page
+import net.slions.compose.preference.Catalog
 import net.slions.compose.preference.ProvidePreferenceLocals
 import net.slions.compose.preference.ProvidePreferenceTheme
-import net.slions.compose.preference.preference
+import net.slions.compose.preference.item
 import net.slions.compose.preference.windowAdaptiveInfoFor
 
 /**
@@ -70,13 +70,13 @@ private val DEFAULT_MAX_SHEET_WIDTH: Dp = 480.dp
  * @param onOpenSheet Invoked when the row is tapped, to show the sheet.
  */
 @Composable
-fun sheetSettingsPage(onOpenSheet: () -> Unit): PreferencePage =
-    PreferencePage(
+fun sheetSettingsPage(onOpenSheet: () -> Unit): Page =
+    Page(
         id = "sheet_settings",
         title = "Sheet settings",
         summary = "Opens this settings tree inside a bottom sheet.",
     ) {
-        preference(
+        item(
             key = "sheet_settings_row",
             title = "Open in a bottom sheet",
             summary = "The same tree, hosted in a draggable bottom sheet.",
@@ -194,7 +194,7 @@ private fun DraggableBottomSheet(
 /**
  * The settings tree adapted to a host measured at [hostSize]: a [WindowAdaptiveInfo] is built
  * for that size (no hinges — the fold does not apply to the sheet's surface) and passed to
- * [PreferencePageScreen.adaptiveInfo], so the screen's single- vs two-pane layout follows the
+ * [Catalog.adaptiveInfo], so the screen's single- vs two-pane layout follows the
  * sheet rather than the window.
  *
  * @param onBack Called when the screen's back reaches the root (system back on the list, or
@@ -202,7 +202,7 @@ private fun DraggableBottomSheet(
  */
 @Composable
 private fun SheetSettingsScreen(
-    pages: List<PreferencePage>,
+    pages: List<Page>,
     hostSize: IntSize,
     onBack: () -> Unit,
     rootContent: LazyListScope.() -> Unit = {},
@@ -211,7 +211,7 @@ private fun SheetSettingsScreen(
     // The sheet is a narrow, modal host: it must never split into a list + detail, so force
     // the single-pane layout (the list navigates to the detail and back). Back at the root
     // closes the sheet.
-    PreferencePageScreen(
+    Catalog(
         title = SampleTitle,
         pages = pages,
         adaptiveInfo = windowAdaptiveInfoFor(hostSize, density),

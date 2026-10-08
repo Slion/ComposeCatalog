@@ -45,18 +45,18 @@ classDiagram
 direction LR
 
 %% ===== Screen (top-level composable) =====
-class PreferencePageScreen {
+class Catalog {
   <<composable - screen>>
   +title: String
-  +pages: List~PreferencePage~
+  +pages: List~Page~
   +rootContent: ContentBuilder
   +adaptiveInfo: WindowAdaptiveInfo?
   +singlePaneOnly: Boolean
-  +options: PreferencePageScreenOptions
+  +options: CatalogOptions
   +onBack: OnBack
 }
 
-class PreferencePageScreenOptions {
+class CatalogOptions {
   +hingePolicy: HingePolicy
   +twoPanesOnMediumWidth: Boolean
   +fadingEdges: Boolean
@@ -86,31 +86,31 @@ class BreadcrumbBar {
 class SearchEntry {
   <<data - internal>>
   +id: Int
-  +page: PreferencePage?
+  +page: Page?
   +path: String
   +entry: SearchIndexEntry?
 }
 
 %% ===== Page model =====
-class PreferencePage {
+class Page {
   <<data - model>>
   +id: String
   +title: String
   +summary: String?
   +icon: Composable?
-  +subPages: List~PreferencePage~
+  +subPages: List~Page~
   +onClick: OnClick?
   +contentVersion: Int
   +content: ContentBuilder
   walkPages()*
   findPage(pages, id)*
   findPagePath(pages, id)*
-  searchPreferencePages(pages, index, query)*
+  searchPages(pages, index, query)*
 }
 
 class PageMatch {
   <<data - search result>>
-  +page: PreferencePage
+  +page: Page
   +matches: List~SearchIndexEntry~
 }
 
@@ -131,28 +131,28 @@ class SearchIndexEntry {
 }
 
 %% ===== State / persistence =====
-class Preferences {
+class Store {
   <<interface>>
   +get(key): T?
   +asMap(): Map~String, Any~
-  +toMutablePreferences(): MutablePreferences
+  +toMutableStore(): MutableStore
 }
-class MutablePreferences {
+class MutableStore {
   <<interface>>
   +set(key, value: T?)
   +remove(key)
   +clear()
 }
-class MapPreferences
-class MutableMapPreferences
+class MapStore
+class MutableMapStore
 
-class PreferenceFlow {
+class LocalStore {
   <<state flow>>
-  LocalPreferenceFlow
-  createDefaultPreferenceFlow()*
-  createPreferenceFlow()*
-  ProvidePreferenceFlow()*
-  rememberPreferenceState(key)*
+  LocalStore
+  createDefaultStore()*
+  createStore()*
+  ProvideStore()*
+  rememberValue(key)*
 }
 
 %% ===== Theming =====
@@ -170,83 +170,83 @@ class PreferenceTheme {
 }
 
 %% ===== Row widgets (each = LazyListScope builder + Composable) =====
-class PreferenceRow {
-  <<composable - row family>>
+class Item {
+  <<composable - item family>>
 }
-class BasicPreference {
+class BasicItem {
   <<composable>>
 }
-class CheckboxPreference {
+class ItemCheckbox {
   <<composable>>
 }
-class SwitchPreference {
+class ItemSwitch {
   <<composable>>
 }
-class RadioButtonPreference {
+class ItemRadio {
   <<composable>>
 }
-class SliderPreference {
+class ItemSlider {
   <<composable>>
 }
-class TextFieldPreference {
+class ItemTextField {
   <<composable>>
 }
-class ListPreference {
+class ItemList {
   <<composable>>
 }
-class MultiSelectListPreference {
+class ItemMultiSelectList {
   <<composable>>
 }
-class TwoTargetPreference {
+class ItemActions {
   <<composable>>
 }
-class TwoTargetIconButtonPreference {
+class ItemActionIconButton {
   <<composable>>
 }
-class TwoTargetSwitchPreference {
+class ItemActionsSwitch {
   <<composable>>
 }
-class FooterPreference {
+class ItemFooter {
   <<composable>>
 }
-class PreferenceCategory {
-  <<composable - header>>
+class Section {
+  <<composable - section header>>
 }
-class LiveSliderPreference {
-  <<composable - theme sample>>
+class LiveItemSlider {
+  <<composable - sample>>
 }
-class ColorPreference {
-  <<composable - theme sample>>
+class ColorItem {
+  <<composable - sample>>
 }
 class AccentColorOption {
   <<data>>
 }
 
 %% ===== Card =====
-class PreferenceCardStyle {
+class CardStyle {
   <<sealed>>
   Filled
   Elevated
   Outlined
 }
-class PreferenceCardItem {
+class CardItem {
   <<data>>
   +title: String
   +summary: String?
   +icon: Composable?
   +value: String
 }
-class PreferenceCardRow {
+class CardRow {
   <<data>>
-  +items: List~PreferenceCardItem~
+  +items: List~CardItem~
 }
-class PreferenceCardGroup {
+class CardGroup {
   <<composable>>
 }
-class PreferenceCardScope {
+class CardScope {
   <<dsl scope>>
 }
-class PreferenceCardGroupScope {
+class CardGroupScope {
   <<dsl scope>>
 }
 
@@ -259,61 +259,61 @@ class HingePolicy {
 }
 
 %% ===== Relationships =====
-MutablePreferences --|> Preferences
-MapPreferences --|> Preferences
-MutableMapPreferences --|> MutablePreferences
+MutableStore --|> Store
+MapStore --|> Store
+MutableMapStore --|> MutableStore
 
-PreferencePageScreen --> PreferencePage : pages
-PreferencePageScreen --> PreferencePageScreenOptions : options
-PreferencePageScreenOptions --> HingePolicy : hingePolicy
-PreferencePageScreen ..> ScreenAdaptive : remembers
-PreferencePageScreen ..> PreferenceTheme : consumes
-PreferencePageScreen ..> SearchIndex : builds
-PreferencePageScreen o-- ListPane : composes
-PreferencePageScreen o-- DetailPane : composes
+Catalog --> Page : pages
+Catalog --> CatalogOptions : options
+CatalogOptions --> HingePolicy : hingePolicy
+Catalog ..> ScreenAdaptive : remembers
+Catalog ..> PreferenceTheme : consumes
+Catalog ..> SearchIndex : builds
+Catalog o-- ListPane : composes
+Catalog o-- DetailPane : composes
 ListPane o-- SearchPill : composes
 ListPane ..> BreadcrumbBar : single-pane
 ListPane ..> SearchEntry : search results
 DetailPane ..> SearchEntry : search results
-DetailPane ..> PreferencePage : renders content
+DetailPane ..> Page : renders content
 SearchPill ..> SearchEntry : submits
 
-PreferencePage --> PreferencePage : subPages
-PageMatch --> PreferencePage : page
+Page --> Page : subPages
+PageMatch --> Page : page
 PageMatch --> SearchIndexEntry : matches
 SearchIndex ..> SearchIndexEntry : builds
-SearchIndex ..> PreferencePage : walks
+SearchIndex ..> Page : walks
 SearchEntry ..> SearchIndexEntry : entry
 
-CheckboxPreference ..> PreferenceFlow : reads state
-SliderPreference ..> PreferenceFlow : reads state
-TextFieldPreference ..> PreferenceFlow : reads state
-PreferenceRow ..> PreferenceTheme : styled by
-PreferenceRow ..> PreferenceFlow : reads state
-DetailPane ..> PreferenceRow : renders rows
+ItemCheckbox ..> LocalStore : reads state
+ItemSlider ..> LocalStore : reads state
+ItemTextField ..> LocalStore : reads state
+Item ..> PreferenceTheme : styled by
+Item ..> LocalStore : reads state
+DetailPane ..> Item : renders items
 
-BasicPreference --|> PreferenceRow : is a
-CheckboxPreference --|> PreferenceRow : is a
-SwitchPreference --|> PreferenceRow : is a
-RadioButtonPreference --|> PreferenceRow : is a
-SliderPreference --|> PreferenceRow : is a
-TextFieldPreference --|> PreferenceRow : is a
-ListPreference --|> PreferenceRow : is a
-MultiSelectListPreference --|> PreferenceRow : is a
-TwoTargetPreference --|> PreferenceRow : is a
-TwoTargetIconButtonPreference --|> PreferenceRow : is a
-TwoTargetSwitchPreference --|> PreferenceRow : is a
-FooterPreference --|> PreferenceRow : is a
-PreferenceCategory --|> PreferenceRow : is a
+BasicItem --|> Item : is a
+ItemCheckbox --|> Item : is a
+ItemSwitch --|> Item : is a
+ItemRadio --|> Item : is a
+ItemSlider --|> Item : is a
+ItemTextField --|> Item : is a
+ItemList --|> Item : is a
+ItemMultiSelectList --|> Item : is a
+ItemActions --|> Item : is a
+ItemActionIconButton --|> Item : is a
+ItemActionsSwitch --|> Item : is a
+ItemFooter --|> Item : is a
+Section --|> Item : is a
 
-PreferenceCardGroup ..> PreferenceCardScope : dsl
-PreferenceCardGroup ..> PreferenceCardGroupScope : dsl
-PreferenceCardGroup ..> PreferenceCardStyle : style
-PreferenceCardRow --> PreferenceCardItem : items
-PreferenceCardRow --|> PreferenceRow : is a
-LiveSliderPreference --|> PreferenceRow : is a
-ColorPreference --|> PreferenceRow : is a
-ColorPreference ..> AccentColorOption : options
+CardGroup ..> CardScope : dsl
+CardGroup ..> CardGroupScope : dsl
+CardGroup ..> CardStyle : style
+CardRow --> CardItem : items
+CardRow --|> Item : is a
+LiveItemSlider --|> Item : is a
+ColorItem --|> Item : is a
+ColorItem ..> AccentColorOption : options
 
 </script>
 <script>

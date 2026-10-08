@@ -18,10 +18,10 @@ package net.slions.compose.preference.sample
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
-import net.slions.compose.preference.PreferencePage
-import net.slions.compose.preference.footerPreference
-import net.slions.compose.preference.preferenceCategory
-import net.slions.compose.preference.switchPreference
+import net.slions.compose.preference.Page
+import net.slions.compose.preference.itemFooter
+import net.slions.compose.preference.section
+import net.slions.compose.preference.itemSwitch
 
 const val SampleTitle = "Compose Preference"
 
@@ -29,7 +29,7 @@ const val SampleTitle = "Compose Preference"
  * The sample pages: the live "Theme" page first, then one page per preference type, each
  * exercising the type's various configurations. Card groups and categories are used
  * throughout the pages, so they have no page of their own. Hosted by
- * [net.slions.compose.preference.PreferencePageScreen].
+ * [net.slions.compose.preference.Catalog].
  *
  * @param themeValues the current [SampleThemeValues], applied to the app by [SampleTheme].
  * @param onThemeValuesChange invoked with the next [SampleThemeValues] when the Theme page
@@ -39,39 +39,39 @@ const val SampleTitle = "Compose Preference"
 fun samplePages(
     themeValues: SampleThemeValues,
     onThemeValuesChange: (SampleThemeValues) -> Unit,
-): List<PreferencePage> =
+): List<Page> =
     listOf(
-        themePreferencePage(themeValues, onThemeValuesChange),
-        preferenceRowPage(),
-        checkboxPreferencePage(),
-        switchPreferencePage(),
-        sliderPreferencePage(),
-        listPreferencePage(),
-        multiSelectListPreferencePage(),
-        textFieldPreferencePage(),
-        radioButtonPreferencePage(),
-        footerPreferencePage(),
-        twoTargetPreferencePage(),
-        twoTargetIconButtonPreferencePage(),
-        twoTargetSwitchPreferencePage(),
-        nestedPreferencePage(),
+        themePage(themeValues, onThemeValuesChange),
+        itemPage(),
+        checkboxPage(),
+        switchPage(),
+        sliderPage(),
+        listPage(),
+        multiSelectListPage(),
+        textFieldPage(),
+        radioButtonPage(),
+        footerPage(),
+        itemActionsPage(),
+        itemActionIconButtonPage(),
+        itemActionsSwitchPage(),
+        nestedPage(),
     )
 
 /**
  * The preferences hosted at the root of the sample tree, below the top-level page rows (via
- * [net.slions.compose.preference.PreferencePageScreen.rootContent]): the same builders as any
+ * [net.slions.compose.preference.Catalog.rootContent]): the same builders as any
  * page's content, showing that the root level hosts regular preferences too. Shared by every
  * sample host (the full-screen screen and the bottom sheet).
  */
 fun LazyListScope.sampleRootContent() {
-    preferenceCategory(key = "root_category", title = "Root page")
-    switchPreference(
+    section(key = "root_category", title = "Root page")
+    itemSwitch(
         key = "root_switch",
         defaultValue = true,
         title = "Root switch",
         summary = { if (it) "On" else "Off" },
     )
-    footerPreference(
+    itemFooter(
         key = "root_footer",
         title = "Root footer",
         summary = "The root level hosts any preference, like a page.",

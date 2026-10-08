@@ -21,11 +21,11 @@ import androidx.compose.material.icons.outlined.Expand
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import dev.vicart.compose.material.symbols.MaterialSymbol
-import net.slions.compose.preference.PreferencePage
-import net.slions.compose.preference.checkboxPreference
-import net.slions.compose.preference.preference
-import net.slions.compose.preference.preferenceCategory
-import net.slions.compose.preference.switchPreference
+import net.slions.compose.preference.Page
+import net.slions.compose.preference.itemCheckbox
+import net.slions.compose.preference.item
+import net.slions.compose.preference.section
+import net.slions.compose.preference.itemSwitch
 
 /**
  * The "Nested" page: a page tree used to test the screen's nested navigation. It has two
@@ -34,21 +34,21 @@ import net.slions.compose.preference.switchPreference
  * back should pop one level at a time.
  */
 @Composable
-fun nestedPreferencePage(): PreferencePage =
-    PreferencePage(
+fun nestedPage(): Page =
+    Page(
         id = "nested",
         title = "Nested",
         summary = "A page tree: sub-pages, a three-level trail, and breadcrumb navigation.",
         subPages = listOf(nestedGeneralPage(), nestedAdvancedPage()),
     ) {
-        preferenceCategory(key = "nested_intro_category", title = "About this page")
-        preference(
+        section(key = "nested_intro_category", title = "About this page")
+        item(
             key = "nested_intro",
             title = "Sub-pages",
             summary = "This page's own rows are followed by its sub-page rows. Tapping one " +
                 "navigates into it; the list pane switches to that page's children.",
         )
-        preference(
+        item(
             key = "nested_trail",
             title = "Breadcrumb",
             summary = "In two-pane mode the trail above the panes shows every level; tapping " +
@@ -58,27 +58,27 @@ fun nestedPreferencePage(): PreferencePage =
 
 /** First level of the "Nested" tree: a couple of rows, no sub-pages. */
 @Composable
-private fun nestedGeneralPage(): PreferencePage =
-    PreferencePage(
+private fun nestedGeneralPage(): Page =
+    Page(
         id = "nested_general",
         title = "General",
         summary = "First level: plain rows.",
         icon = { Icon(imageVector = Icons.Outlined.Expand, contentDescription = null) },
     ) {
-        preferenceCategory(key = "nested_general_category", title = "General")
-        preference(
+        section(key = "nested_general_category", title = "General")
+        item(
             key = "nested_general_row",
             title = "General row",
             summary = "A row on the General page (Nested > General).",
         )
-        switchPreference(
+        itemSwitch(
             key = "nested_general_switch",
             defaultValue = true,
             title = "General switch",
             summary = { if (it) "On" else "Off" },
             staticSummary = "On/Off",
         )
-        checkboxPreference(
+        itemCheckbox(
             key = "nested_general_checkbox",
             defaultValue = false,
             title = "General checkbox",
@@ -89,21 +89,21 @@ private fun nestedGeneralPage(): PreferencePage =
 
 /** Second level: a few rows plus a third-level sub-page ("Developer"). */
 @Composable
-private fun nestedAdvancedPage(): PreferencePage =
-    PreferencePage(
+private fun nestedAdvancedPage(): Page =
+    Page(
         id = "nested_advanced",
         title = "Advanced",
         summary = "Second level: rows and a further sub-page.",
         icon = { Icon(imageVector = Icons.Outlined.Expand, contentDescription = null) },
         subPages = listOf(nestedDeveloperPage()),
     ) {
-        preferenceCategory(key = "nested_advanced_category", title = "Advanced")
-        preference(
+        section(key = "nested_advanced_category", title = "Advanced")
+        item(
             key = "nested_advanced_row",
             title = "Advanced row",
             summary = "A row on the Advanced page (Nested > Advanced).",
         )
-        preference(
+        item(
             key = "nested_advanced_row2",
             title = "Another advanced row",
             summary = "Search should find this under the 'Nested > Advanced' trail.",
@@ -112,20 +112,20 @@ private fun nestedAdvancedPage(): PreferencePage =
 
 /** Third level of the "Nested" tree: the deepest page. */
 @Composable
-private fun nestedDeveloperPage(): PreferencePage =
-    PreferencePage(
+private fun nestedDeveloperPage(): Page =
+    Page(
         id = "nested_developer",
         title = "Developer",
         summary = "Third level: the deepest page of the test tree.",
         icon = { Icon(imageVector = Icons.Outlined.Expand, contentDescription = null) },
     ) {
-        preferenceCategory(key = "nested_dev_category", title = "Developer")
-        preference(
+        section(key = "nested_dev_category", title = "Developer")
+        item(
             key = "nested_dev_row",
             title = "Developer row",
             summary = "A row on the Developer page (Nested > Advanced > Developer).",
         )
-        switchPreference(
+        itemSwitch(
             key = "nested_dev_switch",
             defaultValue = false,
             title = "Developer switch",

@@ -24,13 +24,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
-import net.slions.compose.preference.PreferencePageScreen
+import net.slions.compose.preference.Catalog
 import net.slions.compose.preference.ProvidePreferenceLocals
 import net.slions.compose.preference.ProvidePreferenceTheme
 
 /**
  * The root of the sample app: the pages hosted by
- * [net.slions.compose.preference.PreferencePageScreen] (adaptive two-pane layout).
+ * [net.slions.compose.preference.Catalog] (adaptive two-pane layout).
  */
 @Composable
 fun SampleApp() {
@@ -46,7 +46,7 @@ fun SampleApp() {
                 // captured once, against the outer light scheme, and would not follow the
                 // live light/dark switch.
                 ProvidePreferenceTheme {
-                    PreferencePageScreen(
+                    Catalog(
                         title = SampleTitle,
                         // The common sample pages plus a root row that opens the same tree
                         // in a bottom sheet in this activity (Android-only, so it is added

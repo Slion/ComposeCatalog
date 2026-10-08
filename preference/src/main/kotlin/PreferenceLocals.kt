@@ -22,12 +22,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
 public fun ProvidePreferenceLocals(
-    flow: MutableStateFlow<Preferences> = createDefaultPreferenceFlow(),
+    flow: MutableStateFlow<Store> = createDefaultStore(),
     theme: PreferenceTheme = preferenceTheme(),
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
-        LocalPreferenceFlow provides flow,
+        LocalStore provides flow,
         LocalPreferenceTheme provides theme,
         content = content,
     )

@@ -2,7 +2,7 @@
 
 [![Android CI](https://github.com/Slion/ComposePreference/actions/workflows/android.yml/badge.svg)](https://github.com/Slion/ComposePreference/actions/workflows/android.yml)
 
-[Preference](https://developer.android.com/develop/ui/views/components/settings) implementation for [Jetpack Compose](https://developer.android.com/jetpack/compose) [Material 3](https://developer.android.com/jetpack/compose/designsystems/material3).
+[Preference](https://developer.android.com/develop/ui/views/components/settings) screens for [Jetpack Compose](https://developer.android.com/jetpack/compose) [Material 3](https://developer.android.com/jetpack/compose/designsystems/material3).
 
 This is not an officially supported Google product.
 
@@ -43,6 +43,22 @@ This project is consumed as a [git submodule](https://git-scm.com/docs/git-submo
 
 The composite build ensures the `:preference` module is always used in place of any published artifact.
 
+## Core concepts
+
+The library is built from four concepts (plus one for grouping headers):
+
+| Concept | Type(s) | Role |
+|---|---|---|
+| **Catalog** | `Catalog` | The top-level composable: an adaptive (single/two-pane) host for a whole page tree, with search, back handling, and breadcrumbs. |
+| **Page** | `Page` | A named, nestable content node (`subPages` forms a tree of any depth); its `content` block declares items. |
+| **Item** | `Item`, `ItemCheckbox`, `ItemSwitch`, … | One interactive element in a page's list; reads/writes its state through the store via its `key`. |
+| **Section** | `Section` | A non-interactive grouping header between items. |
+| **Store** | `Store`, `MutableStore` | The persisted key/value data source behind items; exposed to the composition as `LocalStore`. |
+
+In one line: *a Catalog hosts Pages; Pages declare Items; Items persist through the Store.*
+
+A class-level overview of the public API is maintained in [`scripts/api-class-diagram.mmd`](scripts/api-class-diagram.mmd); render it with `python scripts/render_diagram.py` and open the produced HTML (drag classes to rearrange).
+
 ## Design
 
 There is no official and complete Material 3 UX specification for preference yet, so the UX design of this library mainly comes from the following sources:
@@ -57,14 +73,14 @@ There is no official and complete Material 3 UX specification for preference yet
 
 This library is designed with both extensibility and ease-of-use in mind.
 
-Basic usage of this library involves invoking the `ProvidePreferenceLocals` composable, and then calling the `*Preference` helper functions in a `LazyColumn` composable:
+Basic usage of this library involves invoking the `ProvidePreferenceLocals` composable, and then calling the `*Item` helper functions in a `LazyColumn` composable:
 
 ```kotlin
 AppTheme {
     ProvidePreferenceLocals {
         // Other composables wrapping the LazyColumn ...
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            switchPreference(
+            itemSwitch(
                 key = "switch_preference",
                 defaultValue = false,
                 title = "Switch preference",
@@ -76,63 +92,63 @@ AppTheme {
 }
 ```
 
-### Preferences
+### Built-in items
 
-Built-in types of preferences include:
+Built-in item types include:
 
-- [`Preference`](preference/src/commonMain/kotlin/Preference.kt)
-- [`PreferenceCategory`](preference/src/commonMain/kotlin/PreferenceCategory.kt)
-- [`CheckboxPreference`](preference/src/commonMain/kotlin/CheckboxPreference.kt)
-- [`FooterPreference`](preference/src/commonMain/kotlin/FooterPreference.kt)
-- [`ListPreference`](preference/src/commonMain/kotlin/ListPreference.kt) (supports both alert dialog and dropdown menu)
-- [`MultiSelectListPreference`](preference/src/commonMain/kotlin/MultiSelectListPreference.kt)
-- [`RadioButtonPreference`](preference/src/commonMain/kotlin/RadioButtonPreference.kt)
-- [`SliderPreference`](preference/src/commonMain/kotlin/SliderPreference.kt)
-- [`SwitchPreference`](preference/src/commonMain/kotlin/SwitchPreference.kt)
-- [`TextFieldPreference`](preference/src/commonMain/kotlin/TextFieldPreference.kt)
-- [`TwoTargetIconButtonPreference`](preference/src/commonMain/kotlin/TwoTargetIconButtonPreference.kt)
-- [`TwoTargetSwitchPreference`](preference/src/commonMain/kotlin/TwoTargetSwitchPreference.kt)
+- [`Item`](preference/src/main/kotlin/Item.kt)
+- [`Section`](preference/src/main/kotlin/Section.kt)
+- [`ItemCheckbox`](preference/src/main/kotlin/ItemCheckbox.kt)
+- [`ItemFooter`](preference/src/main/kotlin/ItemFooter.kt)
+- [`ItemList`](preference/src/main/kotlin/ItemList.kt) (supports both alert dialog and dropdown menu)
+- [`ItemMultiSelectList`](preference/src/main/kotlin/ItemMultiSelectList.kt)
+- [`ItemRadio`](preference/src/main/kotlin/ItemRadio.kt)
+- [`ItemSlider`](preference/src/main/kotlin/ItemSlider.kt)
+- [`ItemSwitch`](preference/src/main/kotlin/ItemSwitch.kt)
+- [`ItemTextField`](preference/src/main/kotlin/ItemTextField.kt)
+- [`ItemActionIconButton`](preference/src/main/kotlin/ItemActionIconButton.kt)
+- [`ItemActionsSwitch`](preference/src/main/kotlin/ItemActionsSwitch.kt)
 
-Each type of built-in preference includes 4 kinds of APIs:
+Each built-in item type includes 4 kinds of APIs:
 
-1. A `LazyListScope.*Preference` extension function, which is the easiest way to use preferences in this library, and helps developers to avoid boilerplates like having to specify the key twice for the `LazyColumn` and the `Preference`.
-2. A `LazyListScope.*Preference` extension function, which is an overload of the first extension function but accepts `value` and `onValueChange` instead.
-3. A `*Preference` composable that takes a `MutableState`, which allows developers to bring in any kind of state they currently have.
-4. A `*Preference` composable that takes `value` and `onValueChange`, which allows developers to use the preference without a state and even in non-preference scenarios.
+1. A `LazyListScope.*Item` extension function, which is the easiest way to use preferences in this library, and helps developers to avoid boilerplates like having to specify the key twice for the `LazyColumn` and the `Item`.
+2. A `LazyListScope.*Item` extension function, which is an overload of the first extension function but accepts `value` and `onValueChange` instead.
+3. A `*Item` composable that takes a `MutableState`, which allows developers to bring in any kind of state they currently have.
+4. A `*Item` composable that takes `value` and `onValueChange`, which allows developers to use the preference without a state and even in non-preference scenarios.
 
 ### Theming
 
-The visual appearance of the preferences can be customized by providing a custom [`PreferenceTheme`](preference/src/commonMain/kotlin/PreferenceTheme.kt) with `preferenceTheme` to `ProvidePreferenceLocals` or `ProvidePreferenceTheme`.
+The visual appearance of the items can be customized by providing a custom [`PreferenceTheme`](preference/src/main/kotlin/PreferenceTheme.kt) with `preferenceTheme` to `ProvidePreferenceLocals` or `ProvidePreferenceTheme`.
 
 Customizable values in the theme include most dimensions, colors and text styles used by the built-in preferences.
 
 ### Data source
 
-The data source of the preferences can be customized by providing a custom `MutableStateFlow<Preferences>` to `ProvidePreferenceLocals` or `ProvidePreferenceFlow`.
+The data source of the preferences can be customized by providing a custom `MutableStateFlow<Store>` to `ProvidePreferenceLocals` or `ProvideStore`.
 
-The [`Preferences`](preference/src/commonMain/kotlin/Preferences.kt) interface defined in this library is similar to the AndroidX DataStore [`Preferences`](https://developer.android.com/reference/kotlin/androidx/datastore/preferences/core/Preferences) class, but:
+The [`Store`](preference/src/main/kotlin/Store.kt) interface defined in this library is similar to the AndroidX DataStore [`Preferences`](https://developer.android.com/reference/kotlin/androidx/datastore/preferences/core/Preferences) class, but:
 
 - It can be implemented by other mechanisms like [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), thanks to being a public interface instead of an abstract class with only an internal constructor.
 - It doesn't have to be produced and updated via a [`DataStore`](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore).
-- It doesn't mandate a fixed set of types that an implementation has to support, so that implementations have the flexibility to support much more or less types. The implementations within this library supports most of the types supported by `SharedPreferences` **except for `Long`** by default. You can opt in to `Long` support by setting `isDefaultPreferenceFlowAndroidLongSupportEnabled` to `true`.
+- It doesn't mandate a fixed set of types that an implementation has to support, so that implementations have the flexibility to support much more or less types. The implementations within this library supports most of the types supported by `SharedPreferences` **except for `Long`** by default. You can opt in to `Long` support by setting `isDefaultStoreAndroidLongSupportEnabled` to `true`.
 
-The default data source provided by this library (`createDefaultPreferenceFlow()`) is implemented with [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), because:
+The default data source provided by this library (`createDefaultStore()`) is implemented with [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), because:
 
 - `SharedPreferences` is available as part of the Android framework, and doesn't require external dependencies like AndroidX DataStore which [bundles its own copy of `protobuf-lite`](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:datastore/datastore-preferences-core/build.gradle;l=108;drc=9fd0cda7bb963d41fd25645b0761776caa830ed7).
 - `SharedPreferences` can actually be [10x faster](https://stackoverflow.com/q/71601343) than AndroidX DataStore, likely due to its existing optimizations and simple threading and persistence model (XML is simple enough to be faster than Protobuf).
 - `SharedPreferences` has a synchronous API, but it is actually async except for the first (un-cached) read, and allows in-memory value change without waiting for the disk write to complete, which is good for the preference use case.
 - Existing users of `SharedPreferences` can use this library directly with the default data source.
 
-**There should only be at most one invocation of `createDefaultPreferenceFlow()`**, similar to creating `DataStore` in AndroidX DataStore. It is also only for usage within a single process due to being backed by `SharedPreferences`.
+**There should only be at most one invocation of `createDefaultStore()`**, similar to creating `DataStore` in AndroidX DataStore. It is also only for usage within a single process due to being backed by `SharedPreferences`.
 
-If AndroidX DataStore is considered more appropriate for your use case, e.g. you need multi-process support, you can also create an AndroidX DataStore backed implementation that provides a `MutableStateFlow<Preferences>` on your own.
+If AndroidX DataStore is considered more appropriate for your use case, e.g. you need multi-process support, you can also create an AndroidX DataStore backed implementation that provides a `MutableStateFlow<Store>` on your own.
 
 ## Settings screen
 
-[`PreferencePageScreen`](preference/src/androidMain/kotlin/PreferencePageScreen.kt) hosts a whole settings tree in a single adaptive screen: a list pane of pages with a search field, and a detail pane showing the selected page's preferences.
+[`Catalog`](preference/src/main/kotlin/Catalog.kt) hosts a whole settings tree in a single adaptive screen: a list pane of pages with a search field, and a detail pane showing the selected page's items.
 
 ```kotlin
-PreferencePageScreen(
+Catalog(
     title = "Settings",
     pages = pages,
     onBack = { dismiss() },
@@ -142,7 +158,7 @@ PreferencePageScreen(
 - **Single-pane** (narrow window, e.g. a phone in portrait): selecting a page navigates to the detail pane; the top bar shows the page title with a back arrow, and system back pops the detail before dismissing the screen.
 - **Two-pane** (wide window, e.g. a tablet or an unfolded foldable): both panes are visible at once as a 50/50 split.
 - The **list pane** shows an MD3-style search pill. While a query is entered, the page list is replaced by the matching pages and preference entries; selecting a result clears the query, opens the page, and scrolls to (briefly highlights) the matched row.
-- The **root of the tree** hosts regular preferences in addition to the page rows: pass `rootContent` to `PreferencePageScreen` to draw them below the top-level pages (any `LazyListScope` preference builder works, as in a page's `content`; the rows are searchable). Bump a page's `contentVersion` or the screen's `rootContentVersion` when rows change at runtime so the search index is rebuilt.
+- The **root of the tree** hosts regular preferences in addition to the page rows: pass `rootContent` to `Catalog` to draw them below the top-level pages (any `LazyListScope` preference builder works, as in a page's `content`; the rows are searchable). Bump a page's `contentVersion` or the screen's `rootContentVersion` when rows change at runtime so the search index is rebuilt.
 
 The screen follows the [Material 3 adaptive](https://developer.android.com/develop/ui/compose/m3/adaptive) layout, so the same code adapts across postures. It also handles **half-folded** foldables (the two panes stay exactly half each via `HingePolicy.NeverAvoid`) and **medium-width** windows (the detail pane activates there, not only at the 720dp "Expanded" class).
 
@@ -151,25 +167,25 @@ The screen follows the [Material 3 adaptive](https://developer.android.com/devel
 A page can declare `subPages`, forming a tree of any depth:
 
 ```kotlin
-PreferencePage(
+Page(
     id = "display",
     title = "Display",
     subPages = listOf(
-        PreferencePage(id = "display_brightness", title = "Brightness") { /* ... */ },
+        Page(id = "display_brightness", title = "Brightness") { /* ... */ },
     ),
 ) { /* ... */ }
 ```
 
 In two-pane mode the current trail is shown as a breadcrumb above the panes (tapping an ancestor jumps back to it); in single-pane mode the back arrow pops one level at a time. Page ids must be unique within the whole tree.
 
-The tree and search helpers live in [`PreferencePage.kt`](preference/src/commonMain/kotlin/PreferencePage.kt): `walkPages()`, `findPage()`, `findPagePath()`, and `searchPreferencePages()`. Search covers the entire tree: [`buildSearchIndex(pages)`](preference/src/commonMain/kotlin/SearchIndex.kt) walks every page's content (including all `subPages`) and records a searchable entry for each preference row, so `PreferencePageScreen` can filter both pages and rows and scroll to a match.
+The tree and search helpers live in [`Page.kt`](preference/src/main/kotlin/Page.kt): `walkPages()`, `findPage()`, `findPagePath()`, and `searchPages()`. Search covers the entire tree: [`buildSearchIndex(pages)`](preference/src/main/kotlin/SearchIndex.kt) walks every page's content (including all `subPages`) and records a searchable entry for each item, so `Catalog` can filter both pages and items and scroll to a match.
 
 ### Hosting in a bottom sheet or dialog
 
-`PreferencePageScreen` reads the window's adaptive info by default. A host that is smaller than the window — a modal bottom sheet, a dialog, a split — should measure its own size, build a `WindowAdaptiveInfo` for it (with no hinges, since the fold does not apply to the host), and pass it via `adaptiveInfo`, so the screen adapts to the host rather than to the window:
+`Catalog` reads the window's adaptive info by default. A host that is smaller than the window — a modal bottom sheet, a dialog, a split — should measure its own size, build a `WindowAdaptiveInfo` for it (with no hinges, since the fold does not apply to the host), and pass it via `adaptiveInfo`, so the screen adapts to the host rather than to the window:
 
 ```kotlin
-PreferencePageScreen(
+Catalog(
     title = "Settings",
     pages = pages,
     adaptiveInfo = hostAdaptiveInfo, // host-measured, no hinges

@@ -11,7 +11,7 @@ short "resolved" note or delete it.
 - **Medium-width two-pane boundary.** The adaptive directive only goes two-pane at the
   720dp "Expanded" width class by default. Unfolded foldables sit right on that boundary
   (≈719dp → "Medium") and would stay single-pane in both orientations.
-  **Workaround (in place):** `PreferencePageScreen` uses
+  **Workaround (in place):** `Catalog` uses
   `calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth`.
   *Open:* confirm the breakpoint on more devices; a per-device `swNNN` override may be needed.
 
@@ -22,7 +22,7 @@ short "resolved" note or delete it.
   exactly half in every fold state.
   *Open:* validate on additional hinge devices (only Honor Magic V2 verified so far).
 
-- **Search result for a multi-row card scrolls to the card, not the row.** A `preferenceCard`
+- **Search result for a multi-row card scrolls to the card, not the row.** A `card`
   is a single lazy item holding many rows, so the recorded search entries share one lazy index;
   selecting such a result scrolls to the card.
   *Open:* per-row targeting inside cards.
@@ -60,7 +60,7 @@ short "resolved" note or delete it.
 
 ## Data source
 
-- **No `Long` by default.** The default `SharedPreferences`-backed flow omits `Long` to match
+- **No `Long` by default.** The default `SharedStore`-backed flow omits `Long` to match
   AndroidX DataStore's behavior; opt in with `isDefaultPreferenceFlowAndroidLongSupportEnabled`.
   (Documented in the README; tracked here so it is not "fixed" away accidentally.)
 
