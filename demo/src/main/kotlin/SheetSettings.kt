@@ -64,29 +64,6 @@ import net.slions.compose.catalog.windowAdaptiveInfoFor
 private val DEFAULT_MAX_SHEET_WIDTH: Dp = 480.dp
 
 /**
- * A root-level page row (shown in the settings list) that opens the settings tree inside a
- * bottom sheet in the current activity. It exists to prove the same tree can be hosted in a
- * small, adaptive surface (a bottom sheet) as well as full-screen: tapping this row shows the
- * sheet, where the tree is adapted to the sheet's size.
- *
- * @param onOpenSheet Invoked when the row is tapped, to show the sheet.
- */
-@Composable
-fun sheetSettingsPage(onOpenSheet: () -> Unit): Page =
-    Page(
-        id = "sheet_settings",
-        title = "Sheet settings",
-        summary = "Opens this settings tree inside a bottom sheet.",
-    ) {
-        item(
-            key = "sheet_settings_row",
-            title = "Open in a bottom sheet",
-            summary = "The same tree, hosted in a draggable bottom sheet.",
-            onClick = onOpenSheet,
-        )
-    }
-
-/**
  * The settings tree in a bottom sheet hosted in the current activity (not a separate one):
  * the same pages as the full-screen host, adapted to the sheet's measured size. The theme
  * values are read from the same shared preference flow as the host, so opening or closing
@@ -107,18 +84,17 @@ fun SheetSettings(
         ProvidePreferenceTheme {
             DraggableBottomSheet(onDismiss, maxWidth) { size ->
                 SheetSettingsScreen(
-                    pages = samplePages(),
-                    hostSize = size,
-                    onBack = onDismiss,
-                    rootContent = {
-                        sampleRootContent(
+                    root =
+                        sampleRootPage(
                             onOpenSettings = {
                                 context.startActivity(
                                     Intent(context, SettingsActivity::class.java)
                                 )
-                            }
-                        )
-                    },
+                            },
+                            onOpenSheet = onDismiss,
+                        ),
+                    hostSize = size,
+                    onBack = onDismiss,
                 )
             }
         }
@@ -212,10 +188,9 @@ private fun DraggableBottomSheet(
  */
 @Composable
 private fun SheetSettingsScreen(
-    pages: List<Page>,
+    root: Page,
     hostSize: IntSize,
     onBack: () -> Unit,
-    rootContent: LazyListScope.() -> Unit = {},
 ) {
     val density = LocalDensity.current
     // The sheet is a narrow, modal host: it must never split into a list + detail, so force
@@ -223,10 +198,9 @@ private fun SheetSettingsScreen(
     // closes the sheet.
     Catalog(
         title = SampleTitle,
-        pages = pages,
+        root = root,
         adaptiveInfo = windowAdaptiveInfoFor(hostSize, density),
         singlePaneOnly = true,
         onBack = onBack,
-        rootContent = rootContent,
     )
 }

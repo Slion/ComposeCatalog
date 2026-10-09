@@ -32,7 +32,6 @@ import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
 /** The [net.slions.compose.catalog.ItemList] page: alert dialogs and dropdowns. */
-@Composable
 fun listPage(): Page =
     Page(
         id = "list",

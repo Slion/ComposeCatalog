@@ -22,34 +22,54 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Adds a preference row to the lazy list.
+ * Adds a row to the lazy list: a preference row, or — with [page] — a row that opens a
+ * page. A page row is the basic way a page references its children: it can be placed
+ * anywhere in a page's content, next to any other item, and it is styled exactly like
+ * any other row (a host may wrap it in a [card] / [cardGroup] like any other item). It
+ * only defaults its action: tapping a page row navigates into [page], unless [onClick]
+ * is set, in which case the action runs instead (e.g. launching an activity that hosts
+ * the page in its own catalog), and the trailing action icon indicates which — a chevron
+ * for navigation, an open-in-new for an action, or a custom [actionIcon].
  *
- * @param key The lazy list key of the row, and the preference state key.
- * @param title The title of the row. Also used as the row's search text.
+ * @param key The lazy list key of the row, and the preference state key. If null,
+ *   [page]'s id is used (page rows are keyed by their page's id).
+ * @param page The page the row opens; when null, the row is a regular preference row.
+ * @param title The title of the row. Also used as the row's search text. If null,
+ *   [page]'s title is used.
  * @param modifier Modifier applied to the row.
  * @param enabled Whether the row is enabled.
- * @param icon The leading icon.
- * @param actionIcon The action icon, shown just before the widget.
- * @param summary The summary text, shown below the title.
+ * @param icon The leading icon. If null, [page]'s icon is used.
+ * @param actionIcon The action icon, shown just before the widget. For a page row,
+ *   a chevron for navigation and an open-in-new icon for an action if null.
+ * @param summary The summary text, shown below the title. If null, [page]'s summary is
+ *   used.
  * @param staticSummary A static summary used in the [buildSearchIndex] index. If null,
- * [summary] is used.
+ *   [summary] is used.
  * @param widgetContainer The trailing widget (e.g. a switch or checkbox).
- * @param onClick Click handler; when null, the row is not clickable.
+ * @param onClick Click handler; for a page row, when null the row navigates into [page];
+ *   when set, it replaces the navigation.
  */
 public fun LazyListScope.item(
-    key: String,
-    title: String,
+    key: String? = null,
+    page: Page? = null,
+    title: String? = null,
     modifier: Modifier = Modifier.fillMaxWidth(),
     enabled: Boolean = true,
     icon: @Composable (() -> Unit)? = null,
@@ -59,25 +79,55 @@ public fun LazyListScope.item(
     widgetContainer: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    SearchIndexer.record(key, title, staticSummary ?: summary)
-    item(key = key, contentType = "Item") {
+    val rowKey = key ?: page?.id
+    val rowTitle = title ?: page?.title
+    val rowSummary = summary ?: page?.summary
+    when {
+        // A page row: registers the page reference (for the tree walk and navigation).
+        // No search entry: the child page is searchable as a page of the tree in its
+        // own right, and a row entry would only duplicate it.
+        page != null -> SearchIndexer.recordSubPage(page, onClick)
+        // A preference row: searchable entry, keyed.
+        rowKey != null -> SearchIndexer.record(rowKey, rowTitle ?: "", staticSummary ?: rowSummary)
+    }
+    item(key = rowKey, contentType = if (page != null) "PageItem" else "Item") {
         Item(
-            title = title,
-            modifier = modifier.then(highlightedKeyModifier(key)),
+            title = rowTitle ?: "",
+            page = page,
+            modifier = modifier.then(highlightedKeyModifier(rowKey)),
             enabled = enabled,
-            icon = icon,
+            icon = icon ?: page?.icon,
             actionIcon = actionIcon,
-            summary = summary,
+            summary = rowSummary,
             widgetContainer = widgetContainer,
             onClick = onClick,
         )
     }
 }
 
+/**
+ * The id of the page currently open in the detail pane, so a page row can highlight
+ * itself; null when no page is open. Provided by the catalog's panes.
+ */
+/**
+ * The navigation callback of the pane hosting a page row: invoked with the page id to
+ * navigate into it. Provided by the catalog's panes.
+ */
+internal val LocalOnSelectPage: ProvidableCompositionLocal<(String) -> Unit> =
+    compositionLocalOf { { } }
+
+/**
+ * One row: a preference row, or — with [page] — a page row that opens the page. A page
+ * row is rendered exactly like any other row (styled like any other: a host may wrap it
+ * in a [card] / [cardGroup] like any other item); it only defaults its action — the
+ * trailing action icon (a chevron for navigation, an open-in-new for an action) and the
+ * click (navigate into [page] unless [onClick] is set).
+ */
 @Composable
 public fun Item(
     title: String,
     modifier: Modifier = Modifier,
+    page: Page? = null,
     enabled: Boolean = true,
     icon: @Composable (() -> Unit)? = null,
     actionIcon: @Composable (() -> Unit)? = null,
@@ -85,6 +135,32 @@ public fun Item(
     widgetContainer: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    // Read in the composable scope: the click lambda is not.
+    val navigate = LocalOnSelectPage.current
+    // A page row's default action icon: a chevron for navigation, an open-in-new for
+    // the action that replaces the navigation.
+    val effectiveActionIcon =
+        if (page != null && actionIcon == null) {
+            @Composable {
+                Icon(
+                    imageVector =
+                        if (onClick == null) {
+                            Icons.Filled.ChevronRight
+                        } else {
+                            Icons.AutoMirrored.Filled.OpenInNew
+                        },
+                    contentDescription = null,
+                )
+            }
+        } else {
+            actionIcon
+        }
+    val effectiveOnClick =
+        if (page != null) {
+            onClick ?: { navigate(page.id) }
+        } else {
+            onClick
+        }
     BasicItem(
         textContainer = {
             val theme = LocalPreferenceTheme.current
@@ -93,7 +169,12 @@ public fun Item(
                     Modifier.padding(
                         theme.padding.copy(
                             start = if (icon != null) 0.dp else Dp.Unspecified,
-                            end = if (widgetContainer != null || actionIcon != null) 0.dp else Dp.Unspecified,
+                            end =
+                                if (widgetContainer != null || effectiveActionIcon != null) {
+                                    0.dp
+                                } else {
+                                    Dp.Unspecified
+                                },
                         )
                     )
             ) {
@@ -143,7 +224,7 @@ public fun Item(
             }
         },
         actionIconContainer = {
-            if (actionIcon != null) {
+            if (effectiveActionIcon != null) {
                 val theme = LocalPreferenceTheme.current
                 Box(
                     modifier =
@@ -156,12 +237,13 @@ public fun Item(
                             theme.iconColor.let {
                                 if (enabled) it else it.copy(alpha = theme.disabledOpacity)
                             },
-                        content = actionIcon,
+                        content = effectiveActionIcon,
                     )
                 }
             }
         },
         widgetContainer = { widgetContainer?.invoke() },
-        onClick = onClick,
+        onClick = effectiveOnClick,
     )
 }
+

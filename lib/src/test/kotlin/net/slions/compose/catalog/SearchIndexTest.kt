@@ -31,27 +31,27 @@ class SearchIndexTest {
             itemSwitch("sound", value = true, onValueChange = {}, title = "Sounds")
         },
     )
-    private val nested = Page(
-        id = "nested",
-        title = "Nested",
-        subPages = listOf(
-            Page(
-                id = "nested-child",
-                title = "Nested child",
-                content = {
-                    itemSwitch("wifi", value = false, onValueChange = {}, title = "Wi-Fi", summary = "Connected")
-                },
-            ),
-        ),
-        content = {},
+    private val nestedChild = Page(
+        id = "nested-child",
+        title = "Nested child",
+        content = {
+            itemSwitch("wifi", value = false, onValueChange = {}, title = "Wi-Fi", summary = "Connected")
+        },
     )
-    private val pages = listOf(settings, nested)
+    private val nested =
+        Page(id = "nested", title = "Nested") { item(page = nestedChild) }
+    private val root =
+        Page(id = "root", title = "Root") {
+            item(page = settings)
+            item(page = nested)
+            itemSwitch("root-row", value = false, onValueChange = {}, title = "Root row")
+        }
 
     @Test
     fun `buildSearchIndex records every row with its key, text and item index`() {
-        val index = buildSearchIndex(pages)
-        // Sub-pages are indexed too.
-        assertEquals(listOf("settings", "nested", "nested-child"), index.keys.toList())
+        val index = buildSearchIndex(root)
+        // Every page of the tree is indexed, including the root and sub-pages.
+        assertEquals(listOf("root", "settings", "nested", "nested-child"), index.keys.toList())
         assertEquals(
             listOf(
                 SearchIndexEntry("dark", "Dark theme", "Use dark theme", 0),
@@ -63,47 +63,50 @@ class SearchIndexTest {
             listOf(SearchIndexEntry("wifi", "Wi-Fi", "Connected", 0)),
             index["nested-child"],
         )
+        // The root's own rows are indexed; page rows are not (the child pages are
+        // searchable in their own right).
+        assertEquals(
+            listOf(SearchIndexEntry("root-row", "Root row", null, 2)),
+            index["root"],
+        )
         // A page without searchable rows still gets an (empty) index entry.
         assertTrue(index["nested"]!!.isEmpty())
     }
 
     @Test
-    fun `buildSearchIndex of root content records the root rows`() {
-        val rootContent: LazyListScope.() -> Unit = {
-            itemSwitch("root-row", value = false, onValueChange = {}, title = "Root row")
-        }
-        assertEquals(
-            listOf(SearchIndexEntry("root-row", "Root row", null, 0)),
-            buildSearchIndex(rootContent),
-        )
+    fun `the structure records page rows in content order with their row index`() {
+        assertEquals(listOf("settings", "nested"), root.structure.subPages.map { it.page.id })
+        assertEquals(listOf(0, 1), root.structure.subPages.map { it.index })
+        assertEquals(listOf("nested-child"), nested.structure.subPages.map { it.page.id })
     }
 
     @Test
-    fun `a blank query matches only the top-level pages`() {
-        val matches = searchPages(pages, buildSearchIndex(pages), "   ")
-        assertEquals(listOf("settings", "nested"), matches.map { it.page.id })
+    fun `a blank query matches only the root page`() {
+        val matches = searchPages(root, buildSearchIndex(root), "   ")
+        assertEquals(listOf("root"), matches.map { it.page.id })
         assertTrue(matches.all { it.matches.isEmpty() })
     }
 
     @Test
     fun `search is case-insensitive on titles, summaries and page titles`() {
-        val index = buildSearchIndex(pages)
-        assertEquals(listOf("settings"), searchPages(pages, index, "DARK").map { it.page.id })
-        assertEquals(listOf("settings"), searchPages(pages, index, "use dark").map { it.page.id })
-        assertEquals(listOf("nested-child"), searchPages(pages, index, "connected").map { it.page.id })
-        assertEquals(listOf("settings"), searchPages(pages, index, "sEtTiNgS").map { it.page.id })
+        val index = buildSearchIndex(root)
+        assertEquals(listOf("settings"), searchPages(root, index, "DARK").map { it.page.id })
+        assertEquals(listOf("settings"), searchPages(root, index, "use dark").map { it.page.id })
+        assertEquals(listOf("nested-child"), searchPages(root, index, "connected").map { it.page.id })
+        assertEquals(listOf("settings"), searchPages(root, index, "sEtTiNgS").map { it.page.id })
+        assertEquals(listOf("root"), searchPages(root, index, "root row").map { it.page.id })
     }
 
     @Test
     fun `search matches nested pages by their rows`() {
-        val matches = searchPages(pages, buildSearchIndex(pages), "wi-fi")
+        val matches = searchPages(root, buildSearchIndex(root), "wi-fi")
         assertEquals(listOf("nested-child"), matches.map { it.page.id })
         assertEquals(listOf("wifi"), matches.single().matches.map { it.key })
     }
 
     @Test
     fun `search returns no match for an unknown query`() {
-        assertTrue(searchPages(pages, buildSearchIndex(pages), "zzz").isEmpty())
+        assertTrue(searchPages(root, buildSearchIndex(root), "zzz").isEmpty())
     }
 
     @Test

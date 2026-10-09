@@ -52,24 +52,15 @@ fun SampleApp() {
                     val context = LocalContext.current
                     Catalog(
                         title = SampleTitle,
-                        // The common sample pages plus the one page that is Android-only
-                        // (so it is added here, not in samplePages): it opens the same
-                        // tree in a bottom sheet in this activity.
-                        pages =
-                            samplePages() +
-                                listOf(sheetSettingsPage(onOpenSheet = { sheetOpen = true })),
-                        // The root rows, including the card that opens the theme in a
-                        // separate activity running its own catalog (its own search scope,
-                        // sharing this app's store).
-                        rootContent = {
-                            sampleRootContent(
+                        root =
+                            sampleRootPage(
                                 onOpenSettings = {
                                     context.startActivity(
                                         Intent(context, SettingsActivity::class.java)
                                     )
-                                }
-                            )
-                        },
+                                },
+                                onOpenSheet = { sheetOpen = true },
+                            ),
                         // This is the app's root surface, but the title bar still carries
                         // a back chevron: at the root of the tree it closes the activity.
                         onBack = { (context as? Activity)?.finish() },

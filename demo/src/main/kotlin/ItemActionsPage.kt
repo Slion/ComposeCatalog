@@ -42,7 +42,6 @@ import net.slions.compose.catalog.itemActions
  * The [net.slions.compose.catalog.ItemActions] page: a row with a second target
  * (anything composable) after a vertical divider.
  */
-@Composable
 fun itemActionsPage(): Page =
     Page(
         id = "two_target",

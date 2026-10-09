@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -37,12 +38,12 @@ import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemSlider
 import kotlin.math.roundToInt
 
-/** The [net.slions.compose.catalog.ItemSlider] page: stateful and value-based. */
-@Composable
-fun sliderPage(): Page {
-    // The page owns the value of the value-based slider (the content builder is not a
-    // composable scope, so the state is hoisted here).
-    val valueBasedState = remember { mutableFloatStateOf(0.75f) }
+/**
+ * The [net.slions.compose.catalog.ItemSlider] page: stateful and value-based. The value
+ * of the value-based slider is hoisted to the host composable (a page is plain data, and
+ * its rows are not a composable scope).
+ */
+fun sliderPage(valueBasedState: MutableFloatState): Page {
     return Page(
         id = "slider",
         title = "Slider",

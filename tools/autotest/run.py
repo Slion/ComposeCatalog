@@ -13,7 +13,12 @@ Examples::
     python tools/autotest/run.py --group all
     python tools/autotest/run.py --test search
     python tools/autotest/run.py --group all --device A2VQ024108006964 --orientation portrait
+    python tools/autotest/run.py --group all --orientation current
     python tools/autotest/run.py --list
+
+``--orientation current`` leaves each device's rotation untouched: the current
+orientation is detected and the tests that apply to it are run (tests may
+declare an ``orientations`` attribute to restrict themselves).
 """
 from __future__ import annotations
 
@@ -54,8 +59,10 @@ def main() -> int:
     parser.add_argument("--test", help="run tests whose name contains this substring")
     parser.add_argument("--group", help=f"run a named group: {', '.join(sorted(FEATURE_GROUPS))}")
     parser.add_argument("--restart", action="store_true", help="restart the app between tests")
-    parser.add_argument("--orientation", choices=["portrait", "landscape", "sensor"],
-                        help="force an orientation for the run")
+    parser.add_argument("--orientation",
+                        choices=["portrait", "landscape", "sensor", "current"],
+                        help="force an orientation for the run, or 'current' to leave "
+                             "the device as-is and run the tests for its current orientation")
     parser.add_argument("--notify", action="store_true",
                         help="post a live progress notification on the device")
     parser.add_argument("--no-save", action="store_true", help="don't persist results")

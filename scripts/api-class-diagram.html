@@ -48,12 +48,13 @@ direction LR
 class Catalog {
   <<composable - screen>>
   +title: String
-  +pages: List~Page~
-  +rootContent: ContentBuilder
+  +root: Page
+  +onBack: OnBack
+  +backEnabled: Boolean
+  +showBackButton: Boolean
   +adaptiveInfo: WindowAdaptiveInfo?
   +singlePaneOnly: Boolean
   +options: CatalogOptions
-  +onBack: OnBack
 }
 
 class CatalogOptions {
@@ -86,7 +87,7 @@ class BreadcrumbBar {
 class SearchEntry {
   <<data - internal>>
   +id: Int
-  +page: Page?
+  +page: Page
   +path: String
   +entry: SearchIndexEntry?
 }
@@ -98,14 +99,14 @@ class Page {
   +title: String
   +summary: String?
   +icon: Composable?
-  +subPages: List~Page~
-  +onClick: OnClick?
   +contentVersion: Int
   +content: ContentBuilder
+  structure (lazy, derived)
+  childPages (derived)
   walkPages()*
-  findPage(pages, id)*
-  findPagePath(pages, id)*
-  searchPages(pages, index, query)*
+  findPage(root, id)*
+  findPagePath(root, id)*
+  searchPages(root, index, query)*
 }
 
 class PageMatch {
@@ -117,8 +118,19 @@ class PageMatch {
 %% ===== Search =====
 class SearchIndex {
   <<static functions>>
-  buildSearchIndex(pages)*
-  buildSearchIndex(rootContent)*
+  buildPageStructure(root)*
+  buildSearchIndex(root)*
+}
+class PageStructure {
+  <<data>>
+  +entries: List~SearchIndexEntry~
+  +subPages: List~SubPageRef~
+}
+class SubPageRef {
+  <<data>>
+  +page: Page
+  +onClick: OnClick?
+  +index: Int
 }
 class SearchIndexEntry {
   <<data>>
@@ -172,6 +184,7 @@ class PreferenceTheme {
 %% ===== Row widgets (each = LazyListScope builder + Composable) =====
 class Item {
   <<composable - item family>>
+  +page: Page? (optional row that opens a page)
 }
 class BasicItem {
   <<composable>>
@@ -263,7 +276,7 @@ MutableStore --|> Store
 MapStore --|> Store
 MutableMapStore --|> MutableStore
 
-Catalog --> Page : pages
+Catalog --> Page : root
 Catalog --> CatalogOptions : options
 CatalogOptions --> HingePolicy : hingePolicy
 Catalog ..> ScreenAdaptive : remembers
@@ -278,12 +291,19 @@ DetailPane ..> SearchEntry : search results
 DetailPane ..> Page : renders content
 SearchPill ..> SearchEntry : submits
 
-Page --> Page : subPages
+Page --> Page : childPages (derived from content)
+Page ..> PageStructure : structure (walk of content)
+PageStructure --> SearchIndexEntry : entries
+PageStructure --> SubPageRef : subPages
+SubPageRef --> Page : page
 PageMatch --> Page : page
 PageMatch --> SearchIndexEntry : matches
 SearchIndex ..> SearchIndexEntry : builds
 SearchIndex ..> Page : walks
+SearchIndex ..> PageStructure : builds
+SearchEntry --> Page : page
 SearchEntry ..> SearchIndexEntry : entry
+Item ..> Page : page row (optional)
 
 ItemCheckbox ..> LocalStore : reads state
 ItemSlider ..> LocalStore : reads state

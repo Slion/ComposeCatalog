@@ -31,7 +31,6 @@ import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
 /** The [net.slions.compose.catalog.ItemCheckbox] page: stateful and value-based. */
-@Composable
 fun checkboxPage(): Page =
     Page(
         id = "checkbox",

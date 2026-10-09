@@ -22,52 +22,70 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class PageTest {
     private val leaf = Page(id = "leaf", title = "Leaf", content = {})
-    private val mid = Page(id = "mid", title = "Mid", subPages = listOf(leaf), content = {})
+    private val mid = Page(id = "mid", title = "Mid") { item(page = leaf) }
     private val other = Page(id = "other", title = "Other", content = {})
-    private val root = Page(id = "root", title = "Root", subPages = listOf(mid, other), content = {})
-    private val pages = listOf(root, Page(id = "top2", title = "Top 2", content = {}))
+    private val root =
+        Page(id = "root", title = "Root") {
+            item(page = mid)
+            item(page = other)
+        }
 
     @Test
     fun `walkPages is depth-first in declaration order`() {
-        assertEquals(listOf("root", "mid", "leaf", "other", "top2"), pages.walkPages().map { it.id })
+        assertEquals(listOf("root", "mid", "leaf", "other"), root.walkPages().map { it.id })
     }
 
     @Test
-    fun `walkPages of a leafless tree is the list itself`() {
-        assertEquals(listOf("leaf"), listOf(leaf).walkPages().map { it.id })
+    fun `walkPages of a leafless tree is the root itself`() {
+        assertEquals(listOf("leaf"), leaf.walkPages().map { it.id })
     }
 
     @Test
     fun `findPage finds nested pages and returns null for missing ids`() {
-        assertSame(leaf, findPage(pages, "leaf"))
-        assertSame(other, findPage(pages, "other"))
-        assertNull(findPage(pages, "nope"))
+        assertSame(leaf, findPage(root, "leaf"))
+        assertSame(other, findPage(root, "other"))
+        assertNull(findPage(root, "nope"))
     }
 
     @Test
     fun `findPage returns the first page when ids are duplicated`() {
         val dup = Page(id = "dup", title = "First", content = {})
         val dup2 = Page(id = "dup", title = "Second", content = {})
-        val tree = listOf(Page(id = "root", title = "R", subPages = listOf(dup, dup2), content = {}))
+        val tree =
+            Page(id = "root", title = "R") {
+                item(page = dup)
+                item(page = dup2)
+            }
         assertSame(dup, findPage(tree, "dup"))
     }
 
     @Test
-    fun `findPagePath returns the chain from the top level down`() {
-        assertEquals(listOf("root", "mid", "leaf"), findPagePath(pages, "leaf")!!.map { it.id })
-        assertEquals(listOf("root"), findPagePath(pages, "root")!!.map { it.id })
-        assertEquals(listOf("top2"), findPagePath(pages, "top2")!!.map { it.id })
-        assertNull(findPagePath(pages, "nope"))
+    fun `findPagePath returns the chain from the root down`() {
+        assertEquals(listOf("root", "mid", "leaf"), findPagePath(root, "leaf")!!.map { it.id })
+        assertEquals(listOf("root"), findPagePath(root, "root")!!.map { it.id })
+        assertNull(findPagePath(root, "nope"))
     }
 
     @Test
     fun `findPagePath does not leak siblings into the path`() {
         // 'other' is a sibling of 'mid' and is visited after the failed 'mid' branch.
-        val path = findPagePath(listOf(root), "other")!!
+        val path = findPagePath(root, "other")!!
         assertEquals(listOf("root", "other"), path.map { it.id })
+    }
+
+    @Test
+    fun `structure subPages are the page rows in content order`() {
+        assertEquals(listOf("mid", "other"), root.structure.subPages.map { it.page.id })
+        assertEquals(listOf("leaf"), mid.structure.subPages.map { it.page.id })
+        // The row's index is its position in the page's own lazy list.
+        assertEquals(0, root.structure.subPages[0].index)
+        assertEquals(1, root.structure.subPages[1].index)
+        // A page row is not a searchable entry of the parent.
+        assertTrue(root.structure.entries.isEmpty())
     }
 
     @Test

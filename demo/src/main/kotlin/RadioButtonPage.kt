@@ -27,6 +27,7 @@ import net.slions.compose.catalog.card
 import net.slions.compose.catalog.cardGroup
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemRadio
+import androidx.compose.runtime.MutableState
 import net.slions.compose.catalog.rememberValue
 
 /**
@@ -34,11 +35,11 @@ import net.slions.compose.catalog.rememberValue
  * own (the radio button is the icon); selection is held per group (by the lazy builder where
  * possible, and with [rememberSaveable] in the composable card group rows).
  */
-@Composable
-fun radioButtonPage(): Page {
-    val group1 = rememberSaveable { mutableStateOf("a") }
+fun radioButtonPage(
+    group1: MutableState<String>,
+    group3: MutableState<String>,
+): Page {
     val selected1 by group1
-    val group3 = rememberSaveable { mutableStateOf("c") }
     val selected3 by group3
     return Page(
         id = "radio_button",

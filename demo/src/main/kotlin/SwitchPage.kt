@@ -30,7 +30,6 @@ import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemSwitch
 
 /** The [net.slions.compose.catalog.ItemSwitch] page: stateful and value-based. */
-@Composable
 fun switchPage(): Page =
     Page(
         id = "switch",

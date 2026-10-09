@@ -31,7 +31,6 @@ import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
 /** The [net.slions.compose.catalog.ItemMultiSelectList] page. */
-@Composable
 fun multiSelectListPage(): Page =
     Page(
         id = "multi_select",

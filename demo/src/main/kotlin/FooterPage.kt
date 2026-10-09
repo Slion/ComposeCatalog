@@ -28,7 +28,6 @@ import net.slions.compose.catalog.cardGroup
 import net.slions.compose.catalog.section
 
 /** The [net.slions.compose.catalog.ItemFooter] page: icon plus summary rows. */
-@Composable
 fun footerPage(): Page =
     Page(
         id = "footer",

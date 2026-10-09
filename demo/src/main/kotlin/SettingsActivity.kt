@@ -23,8 +23,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import net.slions.compose.catalog.Catalog
+import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ProvidePreferenceLocals
 import net.slions.compose.catalog.ProvidePreferenceTheme
+import net.slions.compose.catalog.item
 
 /**
  * A second settings host: a dedicated activity running its own
@@ -54,12 +56,27 @@ private fun SettingsActivityScreen(onBack: () -> Unit) {
     ProvidePreferenceLocals {
         val (themeValues, writeThemeValues) = rememberSampleThemeValues()
         val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
+        // Resolved here (in the composable scope) and passed to the plain page builder.
+        val defaultAccent = systemDefaultAccentColor(darkTheme)
         CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
             SampleTheme(darkTheme = darkTheme) {
                 ProvidePreferenceTheme {
                     Catalog(
                         title = "Settings",
-                        pages = listOf(themePage(themeValues, writeThemeValues)),
+                        // A wrapper root holding the theme as its only page row: a
+                        // childless root would leave the two-pane detail empty.
+                        root =
+                            Page(id = "settings_root", title = "Settings") {
+                                item(
+                                    page =
+                                        themePage(
+                                            values = themeValues,
+                                            onValuesChange = writeThemeValues,
+                                            dark = darkTheme,
+                                            defaultAccent = defaultAccent,
+                                        )
+                                )
+                            },
                         // This is a second surface, not the app's root: the title bar
                         // carries a back chevron and the system back at the root of the
                         // tree both close the activity.

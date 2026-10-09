@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.CardElevation
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -36,11 +38,15 @@ import net.slions.compose.catalog.card
 import net.slions.compose.catalog.cardGroup
 import net.slions.compose.catalog.section
 
-/** The [Item] page: plain rows with the various title/summary/icon configurations. */
-@Composable
-fun itemPage(): Page {
-    val colorScheme = MaterialTheme.colorScheme
-    val elevatedElevation = CardDefaults.elevatedCardElevation()
+/**
+ * The [Item] page: plain rows with the various title/summary/icon configurations. The
+ * theme values are passed in: a page is plain data, and its rows capture what the host
+ * composable resolved (the content builder is not a composable scope).
+ */
+fun itemPage(
+    colorScheme: ColorScheme,
+    elevatedElevation: CardElevation,
+): Page {
     return Page(
         id = "item",
         title = "Item",

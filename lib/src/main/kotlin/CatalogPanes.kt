@@ -159,10 +159,11 @@ internal fun BreadcrumbBar(
 }
 
 /**
- * The list pane: the in-list search pill, the page rows (or the search results while
- * querying), the host's root rows, and — in single-pane mode — the fixed 56dp title bar
- * the list scrolls under. Owns the pane's [LazyListState] and its scroll-to-selection
- * effects.
+ * The list pane: the in-list search pill and the parent page's items — its sub-page rows
+ * and its regular items, in content order (the search results while querying) — and, in
+ * single-pane mode, the fixed 56dp title bar the list scrolls under. At the root level
+ * the parent is the root page, whose items are the list's top level. Owns the pane's
+ * [LazyListState] and its scroll-to-selection effects.
  *
  * The search pill's text field is kept out of the focus tree while [fieldFocusEnabled]
  * is false (launch and pane transitions), so the focus system never restores focus (and
@@ -174,11 +175,9 @@ internal fun ListPane(
     isTwoPane: Boolean,
     showBackButton: Boolean,
     onBack: () -> Unit,
-    listRows: List<Page>,
+    parentPage: Page,
     selectedPageId: String?,
     onSelectPage: (String) -> Unit,
-    isAtRootLevel: Boolean,
-    rootContent: LazyListScope.() -> Unit,
     isSearching: Boolean,
     searchEntries: List<SearchEntry>,
     onSearchEntryClick: (SearchEntry) -> Unit,
@@ -192,19 +191,22 @@ internal fun ListPane(
     onActive: () -> Unit,
 ) {
     val listState = remember { LazyListState() }
-    // Keep the list pane showing the page currently open in the detail: when the row set
-    // changes (popping up the tree in two-pane, opening a page from a search result), the
-    // pane's scroll offset would otherwise be left stale — e.g. scrolled past the end of
-    // a new, shorter list, with the selected row out of view. Keyed on the row set's ids
-    // (not the list instance — hosts rebuild the list on unrelated recompositions, e.g. a
-    // theme change — and not on selectedPageId: a tap does not swap the set at the root
-    // level), so only a navigation that changes the level re-triggers it.
-    LaunchedEffect(listRows.map { it.id }, isSearching) {
+    // Keep the list pane showing the page currently open in the detail: when the parent
+    // page's items change (popping up the tree in two-pane, opening a page from a search
+    // result), the pane's scroll offset would otherwise be left stale — e.g. scrolled
+    // past the end of a new, shorter list, with the selected row out of view. Keyed on
+    // the parent page's id (not on selectedPageId: a tap does not swap the set at the
+    // root level), so only a navigation that changes the level re-triggers it.
+    LaunchedEffect(parentPage.id, isSearching) {
         if (isSearching || listScrollToIndex != null) return@LaunchedEffect
         val sel = selectedPageId ?: return@LaunchedEffect
-        // Item 0 is the search pill; the page rows follow from index 1.
-        val target = 1 + listRows.indexOfFirst { it.id == sel }
-        if (target < 1) return@LaunchedEffect
+        // Item 0 is the search pill; the parent's items follow from index 1. The
+        // selected row's position in the parent's lazy list comes from the walk.
+        val index =
+            parentPage.structure.subPages.firstOrNull { it.page.id == sel }?.index
+                ?: return@LaunchedEffect
+        // Item 0 is the search pill; the parent's items follow from index 1.
+        val target = 1 + index
         // The list is recomposed with the new rows asynchronously; wait until the target
         // row exists before scrolling to it (same pattern as the detail pane).
         snapshotFlow { listState.layoutInfo.totalItemsCount }
@@ -226,8 +228,13 @@ internal fun ListPane(
     }
 
     val edge = if (fadingEdges) PANE_FADING_EDGE_LENGTH else 0.dp
-    // Root rows highlight on a search selection, as detail rows do.
-    CompositionLocalProvider(LocalHighlightedItemKey provides highlightedKey) {
+    // Rows highlight on a search selection, and page rows navigate via the callback
+    // provided here: the items are composed within this scope, even though the
+    // registration itself (the lazy list scope) is not a composable context.
+    CompositionLocalProvider(
+        LocalHighlightedItemKey provides highlightedKey,
+        LocalOnSelectPage provides onSelectPage,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -293,85 +300,11 @@ internal fun ListPane(
                         }
                     }
                 } else {
-                    // The page rows are each drawn in their own card, with the first and
-                    // last showing rounded top/bottom corners (mirroring
-                    // CardGroup). They are the children of the page currently
-                    // shown in the detail pane (the top-level pages while at the root).
-                    // Each row is its own lazy item — not one group item — so the pane
-                    // can scroll to the selected row (e.g. after popping up the tree in
-                    // two-pane, when the row set changes).
-                    items(listRows.size, key = { listRows[it].id }) { index ->
-                        val page = listRows[index]
-                        val horizontalSpacing =
-                            LocalPreferenceTheme.current.horizontalSpacing
-                        val cardShape = MaterialTheme.shapes.medium
-                        val cornerSize =
-                            (cardShape as? RoundedCornerShape
-                                ?: RoundedCornerShape(12.dp)).topStart
-                        // A flat surface (the M3 card color, no elevation): a per-row
-                        // shadow on every visible row is pure scroll cost for a
-                        // settings list.
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            shadowElevation = 0.dp,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        // The 8.dp replaces the spacer the group used
-                                        // to lead with; the 4.dp between rows is the
-                                        // group's item spacing.
-                                        start = horizontalSpacing,
-                                        top =
-                                            if (index == 0) {
-                                                8.dp + horizontalSpacing
-                                            } else {
-                                                4.dp
-                                            },
-                                        end = horizontalSpacing,
-                                        bottom =
-                                            if (index == listRows.lastIndex) {
-                                                horizontalSpacing
-                                            } else {
-                                                0.dp
-                                            },
-                                    ),
-                            shape =
-                                when {
-                                    listRows.size <= 1 -> cardShape
-                                    index == 0 ->
-                                        RoundedCornerShape(
-                                            cornerSize,
-                                            cornerSize,
-                                            CornerSize(0f),
-                                            CornerSize(0f),
-                                        )
-                                    index == listRows.lastIndex ->
-                                        RoundedCornerShape(
-                                            CornerSize(0f),
-                                            CornerSize(0f),
-                                            cornerSize,
-                                            cornerSize,
-                                        )
-                                    else -> RoundedCornerShape(0.dp)
-                                },
-                        ) {
-                            PageRow(
-                                page = page,
-                                selected = page.id == selectedPageId,
-                                // A page with its own onClick is an action row: tapping
-                                // it runs the action instead of navigating.
-                                onClick = {
-                                    page.onClick?.invoke() ?: onSelectPage(page.id)
-                                },
-                            )
-                        }
-                    }
-                    // The root level hosts regular preferences below the page rows
-                    // (any builder works, as in a page's content).
-                    if (isAtRootLevel) {
-                        rootContent(this)
-                    }
+                    // The parent page's items: its sub-page rows and its regular items,
+                    // in content order. Each sub-page row is its own lazy item — not one
+                    // group item — so the pane can scroll to the selected row (e.g. after
+                    // popping up the tree in two-pane, when the row set changes).
+                    parentPage.content(this)
                 }
             }
             // The single persistent header: a fixed 56dp bar at the top that never
@@ -563,10 +496,11 @@ private fun SearchPill(
 }
 
 /**
- * The detail pane: the selected page's sub-page rows above its own preferences, and —
- * in single-pane mode — the fixed 56dp compact bar (back arrow + title) the list scrolls
- * under. Owns the pane's [LazyListState] (shared across pages, so a page change starts
- * at the top) and the scroll-to-row effect for a selected search result.
+ * The detail pane: the selected page's items — its sub-page rows and its regular items,
+ * in content order — and, in single-pane mode, the fixed 56dp compact bar (back arrow +
+ * title) the list scrolls under. Owns the pane's [LazyListState] (shared across pages,
+ * so a page change starts at the top) and the scroll-to-row effect for a selected search
+ * result.
  */
 @Composable
 internal fun DetailPane(
@@ -597,7 +531,13 @@ internal fun DetailPane(
         onDetailScrollConsumed()
     }
     val edge = if (fadingEdges) PANE_FADING_EDGE_LENGTH else 0.dp
-    CompositionLocalProvider(LocalHighlightedItemKey provides highlightedKey) {
+    // Rows highlight on a search selection, and page rows navigate via the callback
+    // provided here: the items are composed within this scope, even though the
+    // registration itself (the lazy list scope) is not a composable context.
+    CompositionLocalProvider(
+        LocalHighlightedItemKey provides highlightedKey,
+        LocalOnSelectPage provides onSelectPage,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -632,18 +572,9 @@ internal fun DetailPane(
                         bottom = edge,
                     ),
             ) {
-                // This page's child pages, as rows above its own preferences: tapping
-                // one navigates deeper into the tree (the list pane switches to that
-                // page's children).
-                if (page.subPages.isNotEmpty()) {
-                    items(page.subPages, key = { sub -> "subpage:${sub.id}" }) { sub ->
-                        PageRow(
-                            page = sub,
-                            selected = sub.id == selectedPageId,
-                            onClick = { sub.onClick?.invoke() ?: onSelectPage(sub.id) },
-                        )
-                    }
-                }
+                // The page's items: its sub-page rows and its regular items, in content
+                // order; tapping a sub-page row navigates deeper into the tree (the
+                // list pane switches to that page's items).
                 page.content(this)
             }
             // The compact bar: declared after the list so it draws above the content.
@@ -683,39 +614,6 @@ internal fun DetailPane(
             }
         }
     }
-}
-
-/**
- * One row of the list pane, styled with the library's preference theme.
- */
-@Composable
-private fun PageRow(
-    page: Page,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Item(
-        title = page.title,
-        summary = page.summary,
-        icon = page.icon,
-        actionIcon = {
-            Icon(
-                imageVector = Icons.Filled.ChevronRight,
-                contentDescription = null,
-            )
-        },
-        onClick = onClick,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    if (selected) {
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                    } else {
-                        Color.Transparent
-                    },
-                ),
-    )
 }
 
 /**

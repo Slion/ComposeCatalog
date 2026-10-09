@@ -16,6 +16,7 @@
 package net.slions.compose.catalog.demo
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,15 +37,12 @@ import net.slions.compose.catalog.section
  * so changing a row here re-themes the whole app — a working example of the controlled
  * preference forms.
  */
-@Composable
 fun themePage(
     values: SampleThemeValues,
     onValuesChange: (SampleThemeValues) -> Unit,
+    dark: Boolean,
+    defaultAccent: Color?,
 ): Page {
-    // The platform's real "Default" accent, resolved against the effective theme (so the
-    // swatch shows what Default will look like, not the currently-selected accent).
-    val dark = effectiveDarkTheme(values.themeMode, isSystemInDarkTheme())
-    val defaultAccent = systemDefaultAccentColor(dark)
     return Page(
         id = "theme",
         title = "Theme",

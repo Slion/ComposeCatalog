@@ -33,7 +33,6 @@ import net.slions.compose.catalog.itemActionIconButton
  * The [net.slions.compose.catalog.ItemActionIconButton] page: a row with an icon
  * button as the second target.
  */
-@Composable
 fun itemActionIconButtonPage(): Page =
     Page(
         id = "two_target_icon_button",

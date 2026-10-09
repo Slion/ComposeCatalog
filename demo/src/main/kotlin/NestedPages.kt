@@ -33,14 +33,15 @@ import net.slions.compose.catalog.itemSwitch
  * deep. The breadcrumb should show the full trail (e.g. "Nested > Advanced > Developer") and
  * back should pop one level at a time.
  */
-@Composable
 fun nestedPage(): Page =
     Page(
         id = "nested",
         title = "Nested",
         summary = "A page tree: sub-pages, a three-level trail, and breadcrumb navigation.",
-        subPages = listOf(nestedGeneralPage(), nestedAdvancedPage()),
     ) {
+        // The sub-page rows, among the regular items: a page reference is just an item.
+        item(page = nestedGeneralPage())
+        item(page = nestedAdvancedPage())
         section(key = "nested_intro_category", title = "About this page")
         item(
             key = "nested_intro",
@@ -57,7 +58,6 @@ fun nestedPage(): Page =
     }
 
 /** First level of the "Nested" tree: a couple of rows, no sub-pages. */
-@Composable
 private fun nestedGeneralPage(): Page =
     Page(
         id = "nested_general",
@@ -88,15 +88,14 @@ private fun nestedGeneralPage(): Page =
     }
 
 /** Second level: a few rows plus a third-level sub-page ("Developer"). */
-@Composable
 private fun nestedAdvancedPage(): Page =
     Page(
         id = "nested_advanced",
         title = "Advanced",
         summary = "Second level: rows and a further sub-page.",
         icon = { Icon(imageVector = Icons.Outlined.Expand, contentDescription = null) },
-        subPages = listOf(nestedDeveloperPage()),
     ) {
+        item(page = nestedDeveloperPage())
         section(key = "nested_advanced_category", title = "Advanced")
         item(
             key = "nested_advanced_row",
@@ -111,7 +110,6 @@ private fun nestedAdvancedPage(): Page =
     }
 
 /** Third level of the "Nested" tree: the deepest page. */
-@Composable
 private fun nestedDeveloperPage(): Page =
     Page(
         id = "nested_developer",

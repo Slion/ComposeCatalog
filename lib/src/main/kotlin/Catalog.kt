@@ -20,7 +20,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -61,13 +60,13 @@ private const val FIELD_FOCUS_SETTLE_MS = 400L
 private enum class ActivePane { List, Detail }
 
 /**
- * A search result row: a page (optionally nested; [path] names its trail, e.g. "Theme >
- * Colors"), a preference entry of a page, or a root row ([page] null; [path] is the
- * screen title).
+ * A search result row: a page (optionally nested; [path] names its trail, e.g. "Nested >
+ * Advanced" — the screen title for the root page's rows) and, for an entry match, the
+ * [entry] of the page.
  */
 internal data class SearchEntry(
     val id: Int,
-    val page: Page?,
+    val page: Page,
     val path: String,
     val entry: SearchIndexEntry?,
 )
@@ -109,12 +108,17 @@ public class CatalogOptions(
  * - Two-pane (e.g. wide windows): both panes are visible at once; the top bar shows the
  *   screen title and there is no navigation.
  *
- * The list pane shows an MD3-style search pill; while a query is entered, the page list
- * is replaced by the matching pages, preference entries, and root rows, and selecting a
- * result clears the query and opens the page (or scrolls to the root row).
+ * The list pane shows the root page's items (its sub-page rows and its regular items, in
+ * content order); the detail pane shows the selected page's items the same way. The list
+ * pane shows an MD3-style search pill; while a query is entered, the items are replaced
+ * by the matching pages and preference entries, and selecting a result clears the query
+ * and opens the page (or scrolls the list to the entry's row).
  *
  * @param title Title of the screen, shown in the top bar.
- * @param pages The pages to show in the list pane, in order.
+ * @param root The root page: its items are the list pane's top level, and its page rows
+ *   ([item] with a [Page]) are the first-level pages. A page whose row carries an
+ *   [item] action is an action row, not a viewable page: the two-pane auto-open skips
+ *   it.
  * @param modifier Modifier applied to the root surface.
  * @param onBack Called when the host should dismiss the screen (i.e. system back while
  * the list pane is on screen in a single-pane layout, or a tap of the title-bar back
@@ -138,12 +142,6 @@ public class CatalogOptions(
  * @param singlePaneOnly Forces the single-pane layout regardless of the (host) width, so
  * a host that must never split into a list + detail (e.g. a bottom sheet, a dialog)
  * stays single-pane even when it is wide; the list navigates to the detail and back.
- * @param rootContent Rows hosted at the root of the tree, below the top-level page rows
- * (hidden while searching); any `LazyListScope` builder works, as in
- * [Page.content]. The rows are searchable; their keys must not collide with
- * page ids, as they share the list pane's lazy list.
- * @param rootContentVersion Increment when [rootContent]'s rows change at runtime so the
- * search index is rebuilt (see [Page.contentVersion]).
  * @param options Tunables for the fold/adaptive workarounds (hinge policy, two-pane
  * width class, pane fading edges); see [CatalogOptions].
  */
@@ -151,15 +149,13 @@ public class CatalogOptions(
 @Composable
 public fun Catalog(
     title: String,
-    pages: List<Page>,
+    root: Page,
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     backEnabled: Boolean = true,
     showBackButton: Boolean = false,
     adaptiveInfo: WindowAdaptiveInfo? = null,
     singlePaneOnly: Boolean = false,
-    rootContent: LazyListScope.() -> Unit = {},
-    rootContentVersion: Int = 0,
     options: CatalogOptions = CatalogOptions(),
 ) {
     // The window-derived adaptive state (quantized size class + scaffold directive);
@@ -224,8 +220,10 @@ public fun Catalog(
     // Survives rotation so a later grow to two-pane can refill the detail pane; a pure
     // rotation round trip on a fresh launch must stay at the root level.
     var userSelectedPage by rememberSaveable { mutableStateOf(false) }
+    // The ids from below the root down to the page (empty = the root level): the root
+    // is the screen itself, so it is never part of the navigation trail.
     fun pathOf(pageId: String): List<String> =
-        findPagePath(pages, pageId)?.map { it.id } ?: listOf(pageId)
+        findPagePath(root, pageId)?.drop(1)?.map { it.id } ?: listOf(pageId)
     fun selectPageById(pageId: String) {
         userSelectedPage = true
         pagePath = pathOf(pageId)
@@ -275,18 +273,20 @@ public fun Catalog(
             navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail
         when {
             isTwoPane && !onDetail -> {
-                // A page with its own onClick is an action row, not a viewable page: the
-                // auto-open filler skips it so the detail does not show its (empty)
+                // A sub-page row with its own onClick is an action row, not a viewable
+                // page: the auto-open filler skips it so the detail does not show its
                 // content.
                 val id =
                     navigator.currentDestination?.contentKey
-                        ?: pages.firstOrNull { it.onClick == null }?.id
-                        ?: pages.first().id
-                pagePath = pathOf(id)
-                navigator.navigateTo(
-                    pane = ListDetailPaneScaffoldRole.Detail,
-                    contentKey = id,
-                )
+                        ?: root.structure.subPages.firstOrNull { it.onClick == null }?.page?.id
+                        ?: root.structure.subPages.firstOrNull()?.page?.id
+                if (id != null) {
+                    pagePath = pathOf(id)
+                    navigator.navigateTo(
+                        pane = ListDetailPaneScaffoldRole.Detail,
+                        contentKey = id,
+                    )
+                }
             }
             isTwoPane && onDetail -> {
                 // Material3's internal snapTo (in rememberThreePaneScaffoldNavigator)
@@ -352,59 +352,70 @@ public fun Catalog(
     BackHandler(enabled = backEnabled, onBack = ::backAction)
 
     val isSearching = query.isNotEmpty()
-    // The index is rebuilt when the tree changes or when a page/root bumps its content
-    // version (rows added or changed at runtime).
-    val index =
-        remember(pages, pages.walkPages().map { it.contentVersion }) {
-            buildSearchIndex(pages)
+    // The structure (search entries + sub-page refs) is rebuilt when the tree changes or
+    // when a page bumps its content version (items added or changed at runtime).
+    val structures =
+        remember(root, root.walkPages().map { it.contentVersion }) {
+            buildPageStructure(root)
         }
-    val rootIndex = remember(rootContentVersion) { buildSearchIndex(rootContent) }
+    val index = remember(structures) { structures.mapValues { it.value.entries } }
+    // Pages whose row carries an action (e.g. launching an activity that hosts the page
+    // in its own catalog) instead of a navigable detail: tapping such a row — anywhere,
+    // including in the search results — runs the action.
+    val pageActions =
+        remember(structures) {
+            structures.values
+                .flatMap { it.subPages }
+                .mapNotNull { it.onClick?.let { action -> it.page.id to action } }
+                .toMap()
+        }
     val matches =
-        remember(pages, index, query) { searchPages(pages, index, query) }
+        remember(root, index, query) { searchPages(root, index, query) }
     val searchEntries =
-        remember(matches, rootIndex, query) {
-            buildSearchEntries(pages, matches, rootIndex, query, title)
-        }
+        remember(matches, query, title) { buildSearchEntries(root, matches, query, title) }
 
-    val currentPage = selectedPageId?.let { id -> findPage(pages, id) }
-    // The trail of pages from the top level to the current one, for the breadcrumb and
-    // the search supporting text (may be stale for one frame after a navigation; it is
-    // re-derived from the real destination below).
+    val currentPage = selectedPageId?.let { id -> findPage(root, id) }
+    // The trail of pages from the root to the current one (root included), for the
+    // breadcrumb and the search supporting text (may be stale for one frame after a
+    // navigation; it is re-derived from the real destination below).
     val currentPath: List<Page> =
-        remember(pages, selectedPageId) {
+        remember(root, selectedPageId) {
             if (selectedPageId != null) {
-                findPagePath(pages, selectedPageId) ?: emptyList()
+                findPagePath(root, selectedPageId) ?: emptyList()
             } else {
                 emptyList()
             }
         }
-    // True while the list pane shows the top-level pages (the root of the tree), as
-    // opposed to the children of the page currently shown in the detail pane.
-    val isAtRootLevel = selectedPageId == null || currentPath.size <= 1
-    // The parent of the page shown in the detail: its children are the rows of the list
-    // pane (the top-level pages while at the root).
-    val listRows: List<Page> =
-        if (isAtRootLevel) pages else currentPath[currentPath.size - 2].subPages
+    // The page whose items fill the list pane: the selected page's parent, or the root
+    // (whose items are the list itself) while no page is selected.
+    val parentPage: Page =
+        if (currentPath.isEmpty()) root else currentPath.getOrNull(currentPath.size - 2) ?: root
     val showBack =
         !isTwoPane &&
             destination?.pane == ListDetailPaneScaffoldRole.Detail &&
             currentPage != null
 
-    // A root row matched by search: back to the root level, then scroll the list pane to
-    // the row and highlight it.
-    fun showRootEntry(entry: SearchIndexEntry) {
+    // An entry of a page the list pane should show: make sure it shows that page's
+    // items, then scroll the list pane to the row and highlight it.
+    fun showListEntry(entry: SearchIndexEntry, owner: Page) {
         query = ""
         when {
+            // The list pane already shows the owner's items.
+            parentPage.id == owner.id -> Unit
+            // Single-pane with the detail open: back to the root list.
             !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail ->
                 scope.launch { popToRootList() }
-
-            // The detail must show a top-level page for the list pane to be at the root
-            // level.
-            isTwoPane && currentPath.size > 1 ->
-                navigateToPath(currentPath.take(1).map { it.id })
+            // Two-pane, nested: move the selection to the current branch's child of the
+            // owner, so the list shows the owner's items.
+            else -> {
+                val child =
+                    currentPath.getOrNull(currentPath.indexOf(owner) + 1)
+                        ?: owner.structure.subPages.firstOrNull()?.page
+                child?.let { navigateToPath(pathOf(it.id)) }
+            }
         }
         highlightedKey = entry.key
-        listScrollToIndex = 1 + pages.size + entry.index
+        listScrollToIndex = 1 + entry.index
     }
 
     // A search result row was tapped.
@@ -412,18 +423,25 @@ public fun Catalog(
         query = ""
         val page = entry.page
         when {
-            // A root row: no page to open.
-            page == null -> entry.entry?.let(::showRootEntry)
-            // An action page: just run its action, no deep navigation.
-            page.onClick != null -> page.onClick()
+            // An action page: its row runs an action, whatever matched.
+            pageActions.containsKey(page.id) -> pageActions[page.id]!!.invoke()
+            // An entry of the page the list pane shows: scroll the list to the row.
+            entry.entry != null && page.id == parentPage.id ->
+                showListEntry(entry.entry, page)
+            // An entry of the root while nested (two-pane): back to the root level, then
+            // scroll the list to the row.
+            entry.entry != null && page.id == root.id -> showListEntry(entry.entry, root)
+            // The root page itself matched: its items are the list itself — nothing to
+            // open.
+            page.id == root.id -> Unit
+            // A page-level match: open the page.
+            entry.entry == null -> selectPageById(page.id)
             else -> {
-                entry.entry?.let {
-                    highlightedKey = it.key
-                    // The detail column lists the page's sub-page rows above its
-                    // content, so shift the content-relative index past them.
-                    scrollToIndex = it.index + page.subPages.size
-                }
                 selectPageById(page.id)
+                highlightedKey = entry.entry!!.key
+                // The entry's index is relative to the page's own lazy list, sub-page
+                // rows included — no offset to compute.
+                scrollToIndex = entry.entry.index
             }
         }
     }
@@ -438,9 +456,11 @@ public fun Catalog(
             // The breadcrumb spanning both panes (two-pane only: in single-pane the
             // per-pane bars with their back arrow already convey position).
             if (isTwoPane) {
+                // The root is the screen itself (its title is the screen title), so it
+                // is not a breadcrumb segment.
                 BreadcrumbBar(
                     title = title,
-                    currentPath = currentPath,
+                    currentPath = currentPath.drop(1),
                     pagePath = pagePath,
                     showBackButton = showBackButton,
                     onBack = ::backAction,
@@ -465,11 +485,9 @@ public fun Catalog(
                             isTwoPane = isTwoPane,
                             showBackButton = showBackButton,
                             onBack = ::backAction,
-                            listRows = listRows,
+                            parentPage = parentPage,
                             selectedPageId = selectedPageId,
                             onSelectPage = ::selectPageById,
-                            isAtRootLevel = isAtRootLevel,
-                            rootContent = rootContent,
                             isSearching = isSearching,
                             searchEntries = searchEntries,
                             onSearchEntryClick = ::onSearchEntrySelected,

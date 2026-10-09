@@ -46,18 +46,17 @@ class CatalogDevice(AndroidDevice):
         self.start_component(MAIN, wait=wait)
 
     def open_sheet_inapp(self) -> bool:
-        """Open the in-activity bottom sheet via its row. Returns True on success.
+        """Open the in-activity bottom sheet via its action row. Returns True on
+        success.
 
-        The sheet is hosted in the same activity as the full-screen screen, so it
-        is reached through the "Open in a bottom sheet" row on the "Sheet settings"
-        page rather than started as a separate activity.
+        The sheet is hosted in the same activity as the full-screen screen, so the
+        root "Sheet settings" action row opens it directly on one tap rather than
+        started as a separate activity.
         """
         import time
 
         self.open_main()
         if not self.tap_title("Sheet settings"):
-            return False
-        if not self.tap_title("Open in a bottom sheet"):
             return False
         time.sleep(2.0)  # let the sheet expand and its content compose
         return True
@@ -170,6 +169,35 @@ class CatalogDevice(AndroidDevice):
         return False
 
     # --- search -----------------------------------------------------------
+    def field_text(self) -> str:
+        """The current text of the (single) search field, "" if none is shown."""
+        return next(
+            (n.text or "" for n in self.nodes()
+             if n.cls == "android.widget.EditText"),
+            "")
+
+    def clear_field(self) -> None:
+        """Empty the search field, verifying it actually went empty.
+
+        The base delete-keyevent clear is not reliable on some IMEs (the LG IME
+        can leave the last character behind), which corrupts the next query
+        ("neste" + "corner" -> "nestecorner"). Prefer the search field's own
+        "Clear" icon, then fall back to the keyevent clear, and only return
+        once the field reads empty.
+        """
+        for _ in range(6):
+            if not self.field_text():
+                return
+            clear_icon = next(
+                (n for n in self.nodes()
+                 if n.content_desc and n.content_desc.strip().lower() == "clear"
+                 and n.center),
+                None)
+            if clear_icon is not None:
+                self.tap(*clear_icon.center)
+            else:
+                super().clear_field()
+
     def search(self, query: str) -> None:
         """Focus the list-pane search pill and type ``query``.
 
@@ -188,16 +216,19 @@ class CatalogDevice(AndroidDevice):
             self.tap(max(80, w // 4), int(h * 0.14))
         else:
             self.tap(*node.center)
+        # Start from an empty field: typing over residue corrupts the query
+        # ("nestecorner" for "corner"); clear_field verifies emptiness.
+        self.clear_field()
         # The IME may drop or auto-correct a character while the keys are
         # injected ("deveoper" for "developer"); the app searches on the
-        # committed field text, so verify it and retype (after clearing) if
-        # the query did not land intact.
+        # committed field text, so verify it exactly and retype (after
+        # clearing) if the query did not land intact.
         self._type_slow(query)
         for _ in range(2):
             committed = next(
                 (n.text for n in self.nodes() if n.cls == "android.widget.EditText"),
                 "")
-            if query in committed:
+            if committed == query:
                 return
             self.clear_field()
             self._type_slow(query)

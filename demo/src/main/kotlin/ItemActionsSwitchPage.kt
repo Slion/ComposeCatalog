@@ -33,7 +33,6 @@ import net.slions.compose.catalog.itemActionsSwitch
  * The [net.slions.compose.catalog.ItemActionsSwitch] page: a row with a switch as the
  * second target, plus a click on the main target.
  */
-@Composable
 fun itemActionsSwitchPage(): Page =
     Page(
         id = "two_target_switch",

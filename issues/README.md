@@ -18,6 +18,8 @@ architecture / API quality, **P2** = hygiene.
 | [007](007-maintainability-cleanup.md) | Dead code, missing tests, CI hardening | P2 | repo |
 | [008](008-performance-benchmark-plan.md) | Performance verification: macrobenchmark + Perfetto on A22 | P0 (enabler) | tooling |
 | [009](009-vocabulary-naming.md) | Vocabulary & naming: define Screen/Page/Row/Store, rename public API | P1 | public API |
+| [010](010-card-surface-tone.md) | Filled cards read brighter than the flat page rows (demo styling) | P3 | demo |
+| [011](011-single-root-page-architecture.md) | One root Page per catalog; pages are collections of items (`subPage` item, no root hacks) | P1 | public API |
 
 Suggested order: **008 first** (baseline on the A22), then **001 + 002** (the reported lag),
 then **003 → 005 → 004 → 009 → 006**, with **007** interleaved.

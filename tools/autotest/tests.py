@@ -12,13 +12,15 @@ skips (recording a ``ctx["notes"]`` entry) rather than failing.
 """
 from __future__ import annotations
 
+import time
+
 from autotest import keys
 
 
 # --- smoke (the cheap default layer) --------------------------------------
 
 def test_smoke_launch(device, ctx):
-    device.open_main()
+    device.open_main(wait=6.0)
     assert device.foreground_package() == device.package, "sample app is not foreground"
     assert device.has_title("Compose Catalog"), "screen title is missing"
     assert device.has_title("Item"), "the first page (Item) is not visible"
@@ -84,6 +86,7 @@ def test_sheet_single_pane(device, ctx):
 def test_search_finds_nested_page(device, ctx):
     device.open_main()
     device.search("developer")
+    time.sleep(2.0)  # let the result list settle before asserting
     assert device.has_title("Developer"), "search did not surface the nested 'Developer' page"
 
 
@@ -109,10 +112,12 @@ def test_settings_search_scope(device, ctx):
     theme query does."""
     assert device.open_settings_activity(), "could not open the settings activity"
     device.search("nested")
+    time.sleep(1.0)  # let the result list settle before asserting
     assert not device.has_title("Nested"), \
         "search leaked the main catalog's tree into the settings activity's scope"
     device.clear_field()
     device.search("corner")
+    time.sleep(2.0)  # let the result list settle before asserting
     assert device.has_title("Corner"), \
         "search did not surface the theme page's 'Corner' row"
 

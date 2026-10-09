@@ -35,7 +35,6 @@ import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemTextField
 
 /** The [net.slions.compose.catalog.ItemTextField] page: string and numeric values. */
-@Composable
 fun textFieldPage(): Page =
     Page(
         id = "text_field",

@@ -20,79 +20,80 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 
 /**
- * A settings page: an id, a title, and its preferences.
+ * A settings page: an id, a title, and its items.
  *
- * The page content is a `LazyListScope` builder so callers can mix any of the library's
- * `*Item` / `section` / `card` items.
+ * A page is just a collection of items: any of the library's `*Item` / `section` /
+ * `card` builders, in any order, plus [item] rows with a [Page] that reference child
+ * pages (the way a page opens its children). The tree can nest to any depth; page ids
+ * must be unique within the whole tree.
  *
  * @property id Unique id of the page; it is used as the lazy list key and as the
  * navigation destination.
  * @property title Title of the page, shown in the list pane and in the detail top bar.
  * @property summary Optional summary shown below the title in the list pane.
  * @property icon Optional leading icon, shown to the left of the title in the list pane.
- * @property content The preferences of the page. This runs in the detail pane's lazy list
- * scope, so it cannot read the composition directly: capture any theme values (e.g.
- * `MaterialTheme.colorScheme`) in an enclosing `@Composable` scope before building the page.
- * @property subPages Optional child pages, shown as rows at the top of this page's detail.
- * The tree can nest to any depth; page ids must be unique within the whole tree. It is
- * declared before [content] so that existing trailing-lambda call sites (`Page(id,
- * title) { ... }`) still bind their lambda to [content].
- * @property onClick Optional action for a row that does not open a page of its own
- * (e.g. an entry that launches a separate screen or activity): when set, tapping the row —
- * in the list pane, in a parent page's sub-page list, or in the search results — invokes
- * it instead of navigating to the detail. The two-pane auto-open skips such pages.
- * @property contentVersion Increment when the rows [content] produces change at runtime
- * (rows added or removed without a new [Page]) so the screen's search index is
+ * @property contentVersion Increment when the items [content] produces change at runtime
+ * (items added or removed without a new [Page]) so the screen's search index is
  * rebuilt. It is declared before [content] so trailing-lambda call sites
  * (`Page(id, title) { ... }`) still bind their lambda to [content].
+ * @property content The items of the page. It runs in a pane's lazy list scope, so it
+ * cannot read the composition directly: capture any theme values (e.g.
+ * `MaterialTheme.colorScheme`) in an enclosing `@Composable` scope before building the
+ * page.
  */
 public data class Page(
     public val id: String,
     public val title: String,
     public val summary: String? = null,
     public val icon: @Composable (() -> Unit)? = null,
-    public val subPages: List<Page> = emptyList(),
-    public val onClick: (() -> Unit)? = null,
     public val contentVersion: Int = 0,
     public val content: LazyListScope.() -> Unit,
-)
+) {
+    /**
+     * The structure of this page (searchable entries + child page references), derived
+     * from a single walk of [content]; cached per instance.
+     */
+    internal val structure: PageStructure by lazy { walkPageContent(this) }
+
+    /** The child pages referenced by [content] via [item] (with a [Page]), in content order. */
+    internal val childPages: List<Page>
+        get() = structure.subPages.map { it.page }
+}
 
 /**
- * Depth-first traversal of [pages] in declaration order, including every level of
- * [Page.subPages].
+ * Depth-first traversal of the page tree rooted at this page, in declaration order,
+ * including every level of page references.
  */
-public fun List<Page>.walkPages(): List<Page> {
+public fun Page.walkPages(): List<Page> {
     val all = mutableListOf<Page>()
-    fun visit(pages: List<Page>) {
-        for (page in pages) {
-            all += page
-            visit(page.subPages)
-        }
+    fun visit(page: Page) {
+        all += page
+        page.childPages.forEach(::visit)
     }
     visit(this)
     return all
 }
 
 /** Finds the page with [id] anywhere in the tree rooted at [pages], or null. */
-public fun findPage(pages: List<Page>, id: String): Page? =
-    pages.walkPages().firstOrNull { it.id == id }
+public fun findPage(root: Page, id: String): Page? =
+    root.walkPages().firstOrNull { it.id == id }
 
 /**
  * The chain of pages from the top level down to (and including) the page with [id], or null
  * when no page in the tree has [id].
  */
-public fun findPagePath(pages: List<Page>, id: String): List<Page>? {
+public fun findPagePath(root: Page, id: String): List<Page>? {
     val path = mutableListOf<Page>()
-    fun visit(pages: List<Page>): Boolean {
-        for (page in pages) {
-            path += page
-            if (page.id == id) return true
-            if (page.subPages.isNotEmpty() && visit(page.subPages)) return true
-            path.removeAt(path.lastIndex)
+    fun visit(page: Page): Boolean {
+        path += page
+        if (page.id == id) return true
+        for (child in page.childPages) {
+            if (visit(child)) return true
         }
+        path.removeAt(path.lastIndex)
         return false
     }
-    return if (visit(pages)) path.toList() else null
+    return if (visit(root)) path.toList() else null
 }
 
 /**
@@ -105,23 +106,24 @@ public data class PageMatch(
 )
 
 /**
- * Case-insensitively searches the whole preference tree of [pages] — including every level
- * of [Page.subPages], in depth-first order — for pages whose title, summary, or
- * any entry of [index] contains [query] (a blank query matches only the top-level pages).
+ * Case-insensitively searches the whole page tree rooted at [root] — including every level
+ * of page references, in depth-first order — for pages whose title, summary, or
+ * any entry of [index] contains [query] (a blank query matches only the root page, whose
+ * items are the list itself).
  * The returned [PageMatch.matches] list only contains the entries that matched the query.
  *
  * @param index The search index built with [buildSearchIndex].
  */
 public fun searchPages(
-    pages: List<Page>,
+    root: Page,
     index: Map<String, List<SearchIndexEntry>>,
     query: String,
 ): List<PageMatch> {
     val q = query.trim().lowercase()
     if (q.isEmpty()) {
-        return pages.map { PageMatch(it, emptyList()) }
+        return listOf(PageMatch(root, emptyList()))
     }
-    return pages.walkPages().mapNotNull { page ->
+    return root.walkPages().mapNotNull { page ->
         val pageMatches =
             page.title.lowercase().contains(q) || page.summary?.lowercase()?.contains(q) == true
         // Entries use the lowercase precomputed at index-build time.

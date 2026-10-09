@@ -54,6 +54,16 @@ internal object SearchIndexer {
         collector?.record(key, title, summary)
 
     /**
+     * Records a page reference for the page row ([item] with a [Page]) being registered
+     * (its row is registered with the fake scope immediately after). No-op when no walk is in
+     * progress. Unlike [record], it does not add a search entry: the child page is
+     * searchable as a page of the tree in its own right.
+     */
+    fun recordSubPage(page: Page, onClick: (() -> Unit)?) {
+        collector?.recordSubPage(page, onClick)
+    }
+
+    /**
      * Replaces the placeholder index of [entries] with the index of the lazy list item they
      * belong to. No-op when no walk is in progress.
      */
@@ -67,6 +77,28 @@ internal object SearchIndexer {
      */
     fun itemCount(): Int = collector?.count ?: 0
 }
+
+/**
+ * A child-page reference registered by a page row ([item] with a [Page]): the child page,
+ * an optional action
+ * that replaces navigation when the row is tapped (e.g. launching an activity that
+ * hosts the page in its own catalog), and the index of the row in the owning page's
+ * lazy list.
+ */
+public data class SubPageRef(
+    public val page: Page,
+    public val onClick: (() -> Unit)? = null,
+    public val index: Int = 0,
+)
+
+/**
+ * The structure of one page, derived from a single walk of its content: the searchable
+ * [entries] and the child-page references ([subPages]), both in content order.
+ */
+public data class PageStructure(
+    public val entries: List<SearchIndexEntry>,
+    public val subPages: List<SubPageRef>,
+)
 
 /** A searchable entry collected from a page's preference tree. */
 public data class SearchIndexEntry(
@@ -91,95 +123,79 @@ public data class SearchIndexEntry(
 )
 
 /**
- * Builds the search index of [pages] by walking each page's content — including every level
- * of [Page.subPages] — against a recording [LazyListScope]. The builders'
- * registration code runs, but no item content is ever composed, so the index is always in
- * sync with the page's rows — no separate search entries to maintain. Page ids must be
- * unique within the whole tree, as they key both the index and the navigation.
+ * Walks a single page's content against a recording [LazyListScope]: the builders'
+ * registration code runs, but no item content is ever composed, so the structure is
+ * always in sync with the page's items — no separate search entries to maintain.
  */
-public fun buildSearchIndex(pages: List<Page>): Map<String, List<SearchIndexEntry>> =
-    pages.walkPages().associateBy({ it.id }) { page ->
-        SearchIndexer.withCollector { recorder ->
-            page.content(SearchIndexScope(recorder))
-            recorder.entries.toList()
-        }
-    }
-
-/**
- * Builds the search entries of a `LazyListScope` content block (e.g. the root rows of a
- * settings screen) the same way as [buildSearchIndex] does for a page's content.
- */
-public fun buildSearchIndex(rootContent: LazyListScope.() -> Unit): List<SearchIndexEntry> =
+internal fun walkPageContent(page: Page): PageStructure =
     SearchIndexer.withCollector { recorder ->
-        rootContent(SearchIndexScope(recorder))
-        recorder.entries.toList()
+        page.content(SearchIndexScope(recorder))
+        PageStructure(
+            entries = recorder.entries.toList(),
+            subPages = recorder.subPages.toList(),
+        )
     }
 
 /**
- * Flattens the search [matches] (and the [rootIndex] rows matching [query]) into the
- * result rows the list pane shows, in display order. A row gets a unique id (several
- * rows can share an entry key, e.g. the rows of the same card), so the results list can
- * key on it. [title] is the screen title, shown as the path of the root rows.
+ * The structure of every page in the tree rooted at [root] — including every level of
+ * page references. Page ids must be unique within the whole tree, as they key both the
+ * structure and the navigation.
+ */
+public fun buildPageStructure(root: Page): Map<String, PageStructure> =
+    root.walkPages().associateBy({ it.id }) { it.structure }
+
+/**
+ * Builds the search index of the page tree rooted at [root] (the searchable entries of
+ * every page, including every level of page references), keyed by page id.
+ */
+public fun buildSearchIndex(root: Page): Map<String, List<SearchIndexEntry>> =
+    buildPageStructure(root).mapValues { it.value.entries }
+
+/**
+ * Flattens the search [matches] into the result rows the list pane shows, in display
+ * order (the root page first, as in the walk). A row gets a unique id (several rows can
+ * share an entry key, e.g. the rows of the same card), so the results list can key on
+ * it. [title] is the screen title, shown as the path of the root page's rows (the root
+ * is the screen itself, so it has no trail segment).
  *
  * A pure function so it can be memoized (e.g. in `remember`) and unit-tested.
  */
 internal fun buildSearchEntries(
-    pages: List<Page>,
+    root: Page,
     matches: List<PageMatch>,
-    rootIndex: List<SearchIndexEntry>,
     query: String,
     title: String,
 ): List<SearchEntry> {
     var rowId = 0
-    val q = query.trim().lowercase()
     return buildList {
-        matches.flatMapTo(this) { match ->
-            // The page's trail in the tree (e.g. "Theme > Colors"), shown under each of
-            // its result rows.
+        matches.forEach { match ->
+            // The page's trail in the tree (e.g. "Nested > Advanced"), shown under each
+            // of its result rows; the root's trail is the screen title.
             val path =
-                (findPagePath(pages, match.page.id)?.map { it.title } ?: emptyList())
+                (findPagePath(root, match.page.id)?.drop(1)?.map { it.title } ?: emptyList())
                     .joinToString(" > ")
-            buildList {
-                if (match.matches.isEmpty()) {
-                    // The page itself matched (by title/summary): show the page row.
-                    add(
-                        SearchEntry(
-                            id = rowId++,
-                            page = match.page,
-                            path = path,
-                            entry = null,
-                        )
+                    .ifEmpty { title }
+            if (match.matches.isEmpty()) {
+                // The page itself matched (by title/summary): show the page row.
+                add(
+                    SearchEntry(
+                        id = rowId++,
+                        page = match.page,
+                        path = path,
+                        entry = null,
                     )
-                }
-                // One row per matching preference entry of the page's tree.
-                addAll(
-                    match.matches.map {
-                        SearchEntry(
-                            id = rowId++,
-                            page = match.page,
-                            path = path,
-                            entry = it,
-                        )
-                    },
                 )
             }
-        }
-        // Root rows live in the list pane (no page of their own).
-        if (q.isNotEmpty()) {
+            // One row per matching preference entry of the page.
             addAll(
-                // The lowercase is precomputed at index-build time.
-                rootIndex
-                    .filter {
-                        it.titleLowercase.contains(q) || it.summaryLowercase?.contains(q) == true
-                    }
-                    .map {
-                        SearchEntry(
-                            id = rowId++,
-                            page = null,
-                            path = title,
-                            entry = it,
-                        )
-                    },
+                match.matches.map {
+                    SearchEntry(
+                        id = rowId++,
+                        page = match.page,
+                        path = path,
+                        entry = it,
+                    )
+                },
             )
         }
     }
@@ -195,12 +211,19 @@ internal class SearchIndexRecorder {
      */
     val entries: MutableList<SearchIndexEntry> = mutableListOf()
 
+    /** The sub-page references, in registration (content) order. */
+    val subPages: MutableList<SubPageRef> = mutableListOf()
+
     /** The number of lazy list items registered so far. */
     internal var count: Int = 0
         private set
 
     internal fun registerItem() {
         count++
+    }
+
+    internal fun recordSubPage(page: Page, onClick: (() -> Unit)?) {
+        subPages.add(SubPageRef(page = page, onClick = onClick, index = count))
     }
 
     fun record(key: String, title: String, summary: String? = null): SearchIndexEntry {
