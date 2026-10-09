@@ -19,11 +19,13 @@ package net.slions.compose.catalog.demo
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import dev.vicart.compose.material.symbols.MaterialSymbol
+import net.slions.compose.catalog.Item
+import net.slions.compose.catalog.ItemFooter
+import net.slions.compose.catalog.ItemSwitch
 import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.itemFooter
+import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.section
-import net.slions.compose.catalog.itemSwitch
 
 const val SampleTitle = "Compose Catalog"
 
@@ -53,40 +55,51 @@ fun samplePages(): List<Page> =
     )
 
 /**
- * A root row that opens the theme settings in a separate activity hosting its own
- * [net.slions.compose.catalog.Catalog]. It demonstrates that one app can host several
- * independent catalogs: the settings activity's catalog has its own page tree and a
- * separate search scope, yet shares the same process-wide store as this one.
- *
- * @param onOpen Invoked when the row is tapped, to start the settings activity.
- */
-fun LazyListScope.settingsRootRow(onOpen: () -> Unit) {
-    item(
-        key = "settings_row",
-        title = "Settings",
-        summary = "A second catalog: its own tree and search, sharing this app's store.",
-        icon = { MaterialSymbol.Outlined(icon = "open_in_new") },
-        onClick = onOpen,
-    )
-}
-
-/**
  * The preferences hosted at the root of the sample tree, below the top-level page rows (via
  * [net.slions.compose.catalog.Catalog.rootContent]): the same builders as any
  * page's content, showing that the root level hosts regular preferences too. Shared by every
  * sample host (the full-screen screen and the bottom sheet).
+ *
+ * The last card opens the theme settings in a separate activity hosting its own
+ * [net.slions.compose.catalog.Catalog], demonstrating that one app can host several
+ * independent catalogs: that activity's catalog has its own page tree and a separate
+ * search scope, yet shares the same process-wide store as this one. Its trailing action
+ * icon is [open_in_new] (not the page-row chevron): the tap launches an activity rather
+ * than navigating the tree.
+ *
+ * @param onOpenSettings Invoked when the Settings card is tapped, to start the settings
+ *   activity.
  */
-fun LazyListScope.sampleRootContent() {
+fun LazyListScope.sampleRootContent(onOpenSettings: () -> Unit) {
     section(key = "root_category", title = "Root page")
-    itemSwitch(
-        key = "root_switch",
-        defaultValue = true,
-        title = "Root switch",
-        summary = { if (it) "On" else "Off" },
-    )
-    itemFooter(
-        key = "root_footer",
-        title = "Root footer",
-        summary = "The root level hosts any preference, like a page.",
-    )
+    cardGroup(key = "root_group") {
+        card(
+            title = "Root switch",
+            summary = "On",
+        ) {
+            val state = rememberValue(key = "root_switch", defaultValue = true)
+            ItemSwitch(
+                state = state,
+                title = "Root switch",
+                summary = { if (it) "On" else "Off" },
+            )
+        }
+        card(
+            title = "Root footer",
+            summary = "The root level hosts any preference, like a page.",
+        ) {
+            ItemFooter(summary = "The root level hosts any preference, like a page.")
+        }
+        card(
+            title = "Settings",
+            summary = "A second catalog: its own tree and search, sharing this app's store.",
+        ) {
+            Item(
+                title = "Settings",
+                summary = "A second catalog: its own tree and search, sharing this app's store.",
+                actionIcon = { MaterialSymbol.Outlined(icon = "open_in_new") },
+                onClick = onOpenSettings,
+            )
+        }
+    }
 }

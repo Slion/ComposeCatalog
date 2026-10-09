@@ -58,13 +58,12 @@ fun SampleApp() {
                         pages =
                             samplePages() +
                                 listOf(sheetSettingsPage(onOpenSheet = { sheetOpen = true })),
-                        // The root rows, plus the row that opens the theme in a separate
-                        // activity running its own catalog (its own search scope, sharing
-                        // this app's store).
+                        // The root rows, including the card that opens the theme in a
+                        // separate activity running its own catalog (its own search scope,
+                        // sharing this app's store).
                         rootContent = {
-                            sampleRootContent()
-                            settingsRootRow(
-                                onOpen = {
+                            sampleRootContent(
+                                onOpenSettings = {
                                     context.startActivity(
                                         Intent(context, SettingsActivity::class.java)
                                     )

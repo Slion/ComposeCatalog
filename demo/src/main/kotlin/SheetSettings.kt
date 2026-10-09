@@ -16,6 +16,7 @@
 
 package net.slions.compose.catalog.demo
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -101,13 +103,22 @@ fun SheetSettings(
     maxWidth: Dp = DEFAULT_MAX_SHEET_WIDTH,
 ) {
     ProvidePreferenceLocals {
+        val context = LocalContext.current
         ProvidePreferenceTheme {
             DraggableBottomSheet(onDismiss, maxWidth) { size ->
                 SheetSettingsScreen(
                     pages = samplePages(),
                     hostSize = size,
                     onBack = onDismiss,
-                    rootContent = { sampleRootContent() },
+                    rootContent = {
+                        sampleRootContent(
+                            onOpenSettings = {
+                                context.startActivity(
+                                    Intent(context, SettingsActivity::class.java)
+                                )
+                            }
+                        )
+                    },
                 )
             }
         }
