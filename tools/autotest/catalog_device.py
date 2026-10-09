@@ -1,9 +1,9 @@
-"""App profile for the Compose Preference ``sample`` app.
+"""App profile for the Compose Catalog ``demo`` app.
 
 Subclasses AutoTest's :class:`~autotest.android.device.AndroidDevice` with the
 concrete app under test: its package, its two hosts (the full-screen settings
 activity and the bottom-sheet activity), and the semantic helpers the tests use
-to drive :func:`~net.slions.compose.catalog.PreferencePageScreen` — open a
+to drive :func:`~net.slions.compose.catalog.Catalog` — open a
 host, read the visible titles, drive a nested page, and type into the search
 pill.
 
@@ -30,8 +30,8 @@ PACKAGE = "net.slions.compose.catalog.demo"
 MAIN = "net.slions.compose.catalog.demo/.MainActivity"
 
 
-class PreferenceDevice(AndroidDevice):
-    """A device bound to the Compose Preference sample app."""
+class CatalogDevice(AndroidDevice):
+    """A device bound to the Compose Catalog demo app."""
 
     #: The sample app's package id (also the default for the run resolver).
     package_id = PACKAGE

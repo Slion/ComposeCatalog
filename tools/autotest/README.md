@@ -1,17 +1,17 @@
-# Compose Preference device-UI tests
+# Compose Catalog device-UI tests
 
 Device-UI tests for the `sample` app, which doubles as the fixture for the
 library's screen behavior. Built on the
 [AutoTest](https://github.com/Slion/AutoTest) framework (a git submodule at
 [`../../subs/AutoTest`](../../subs/AutoTest)): the framework is app-agnostic, and this
-directory holds the **app profile** and the **tests** for the Compose Preference
+directory holds the **app profile** and the **tests** for the Compose Catalog
 sample.
 
 ## Layout
 
 | File | Purpose |
 | --- | --- |
-| `preference_device.py` | `PreferenceDevice` — the app profile (package, hosts, semantic helpers). |
+| `catalog_device.py` | `CatalogDevice` — the app profile (package, hosts, semantic helpers). |
 | `tests.py` | The test functions, their descriptions, and the feature groups. |
 | `run.py` | CLI entry point — a thin wrapper over the AutoTest `Runner`. |
 | `results/` | Per-device-model + configuration results (generated; git-ignored). |
@@ -71,7 +71,7 @@ that used to pass is flagged.
 - The `sheet` group targets the in-activity bottom sheet, which is **always
   single-pane** (`singlePaneOnly`). The full-screen screen stays composed behind
   the sheet's scrim, so these assertions check nodes in the sheet's lower screen
-  region (`PreferenceDevice.sheet_contains`) rather than global titles. They are
+  region (`CatalogDevice.sheet_contains`) rather than global titles. They are
   behavioral (tapping a page replaces the list with the detail) and do not depend
   on device width.
 - Tests are self-contained: each opens the host it needs from a clean state

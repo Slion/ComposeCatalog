@@ -1,6 +1,6 @@
-# Compose Preference
+# Compose Catalog
 
-[![Android CI](https://github.com/Slion/ComposePreference/actions/workflows/android.yml/badge.svg)](https://github.com/Slion/ComposePreference/actions/workflows/android.yml)
+[![Android CI](https://github.com/Slion/ComposeCatalog/actions/workflows/android.yml/badge.svg)](https://github.com/Slion/ComposeCatalog/actions/workflows/android.yml)
 
 [Preference](https://developer.android.com/develop/ui/views/components/settings) screens for [Jetpack Compose](https://developer.android.com/jetpack/compose) [Material 3](https://developer.android.com/jetpack/compose/designsystems/material3).
 
@@ -21,14 +21,14 @@ This project is consumed as a [git submodule](https://git-scm.com/docs/git-submo
 1. Add the submodule:
 
    ```sh
-   git submodule add https://github.com/Slion/ComposePreference.git third_party/composepreference
+   git submodule add https://github.com/Slion/ComposeCatalog.git third_party/composecatalog
    git submodule update --init --recursive
    ```
 
 2. Include the submodule as a composite build and substitute the `:lib` module for the library coordinate, in your root `settings.gradle.kts`:
 
    ```kotlin
-   includeBuild("third_party/composepreference") {
+   includeBuild("third_party/composecatalog") {
        dependencySubstitution {
            substitute(module("net.slions.compose.catalog:lib")).using(project(":lib"))
        }

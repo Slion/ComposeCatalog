@@ -1,8 +1,8 @@
-"""The Compose Preference sample device-UI test suite.
+"""The Compose Catalog demo device-UI test suite.
 
 Plain ``test_*(device, ctx)`` functions that raise :class:`AssertionError` on
 failure, written against the generic :class:`~autotest.device.Device` contract
-plus the :class:`preference_device.PreferenceDevice` helpers. Grouped into named
+plus the :class:`catalog_device.CatalogDevice` helpers. Grouped into named
 feature groups; the reserved ``"all"`` group (added by :class:`~autotest.Suite`)
 runs every test.
 
@@ -20,7 +20,7 @@ from autotest import keys
 def test_smoke_launch(device, ctx):
     device.open_main()
     assert device.foreground_package() == device.package, "sample app is not foreground"
-    assert device.has_title("Compose Preference"), "screen title is missing"
+    assert device.has_title("Compose Catalog"), "screen title is missing"
     assert device.has_title("Theme"), "the first page (Theme) is not visible"
 
 
@@ -65,7 +65,7 @@ def test_nested_breadcrumb(device, ctx):
 def test_sheet_launches(device, ctx):
     assert device.open_sheet_inapp(), "could not open the bottom sheet from the app"
     assert device.foreground_package() == device.package, "the app is not foreground"
-    assert device.sheet_contains("Compose Preference"), "the sheet title is missing"
+    assert device.sheet_contains("Compose Catalog"), "the sheet title is missing"
 
 
 def test_sheet_single_pane(device, ctx):

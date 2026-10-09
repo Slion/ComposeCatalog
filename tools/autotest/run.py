@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry point for the Compose Preference device-UI tests.
+"""CLI entry point for the Compose Catalog device-UI tests.
 
 A thin wrapper over the AutoTest framework: it builds the sample app's
 :class:`~autotest.Suite` and runs it. The framework is imported from the
@@ -29,19 +29,19 @@ for _p in (str(_HERE), str(_FRAMEWORK)):
         sys.path.insert(0, _p)
 
 from autotest import Runner, Suite  # noqa: E402
-from preference_device import PreferenceDevice  # noqa: E402
+from catalog_device import CatalogDevice  # noqa: E402
 from tests import ALL_TESTS, DEFAULT_GROUP, FEATURE_GROUPS, TEST_DESCRIPTIONS  # noqa: E402
 
 RESULTS_DIR = _HERE / "results"
 
 
 def resolve(device: str | None, use_all: bool, package: str | None):
-    """Map the CLI device selection to :class:`PreferenceDevice` objects."""
+    """Map the CLI device selection to :class:`CatalogDevice` objects."""
     from autotest.android import adb
 
     serials = adb.resolve_devices(device, use_all)
-    pkg = package or PreferenceDevice.package_id
-    return [PreferenceDevice(s, None) for s in serials]
+    pkg = package or CatalogDevice.package_id
+    return [CatalogDevice(s, None) for s in serials]
 
 
 def main() -> int:

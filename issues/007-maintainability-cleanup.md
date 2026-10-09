@@ -4,7 +4,7 @@
 
 ## Dead code
 
-- `desktopSample/` — not in `settings.gradle.kts`; delete.
+- ~~`desktopSample/` — not in `settings.gradle.kts`; delete.~~ **done** (2026-10-09).
 - `sample/…/SheetSettingsActivity.kt` — replaced by the in-activity sheet; not in the
   manifest; delete.
 - `ScrollIndicators.kt` — custom indicators used only by the list dialogs; keep or drop.

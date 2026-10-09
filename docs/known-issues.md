@@ -1,6 +1,6 @@
 # Known issues & limitations
 
-A running log of open issues and known limitations in the Compose Preference library,
+A running log of open issues and known limitations in the Compose Catalog library,
 ordered roughly by impact. Each entry says where the problem shows up and the current
 workaround, so it can be cross-checked against the
 [device-UI tests](../tools/autotest/README.md). When a fix lands, move the entry to a

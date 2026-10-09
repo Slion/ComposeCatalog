@@ -23,7 +23,7 @@ import net.slions.compose.catalog.itemFooter
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemSwitch
 
-const val SampleTitle = "Compose Preference"
+const val SampleTitle = "Compose Catalog"
 
 /**
  * The sample pages: the live "Theme" page first, then one page per preference type, each

@@ -1,6 +1,6 @@
 # Improvement plans
 
-Improvement plans for the Compose Preference framework, produced from a full architecture
+Improvement plans for the Compose Catalog framework, produced from a full architecture
 review on 2026-10-08. Backward compatibility is **not** a constraint: APIs may be changed or
 removed freely; each plan says which public surface it touches.
 

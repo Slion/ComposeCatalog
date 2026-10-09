@@ -22,6 +22,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = "ComposePreference"
+rootProject.name = "ComposeCatalog"
 
 include(":lib", ":demo", ":benchmark")
