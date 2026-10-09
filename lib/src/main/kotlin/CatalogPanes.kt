@@ -57,6 +57,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -409,18 +410,25 @@ private fun SearchPill(
     focusEnabled: Boolean,
 ) {
     val textFieldState = rememberTextFieldState()
-    // Keep the query in sync with the field's text. Keyed on query so the collector
-    // always reads the current value (a coroutine closure would otherwise capture the
-    // value from the composition that started it).
-    LaunchedEffect(query) {
+    // The query as seen by the long-lived collector below: a plain closure would capture
+    // the value from the composition that started the effect, so read it live.
+    val currentQuery by rememberUpdatedState(query)
+    // Field -> query: the field is the source of truth while typing. The collector must
+    // NOT restart when the query changes — restarting it mid-IME-commit would re-emit a
+    // stale text and race the IME's composing region (the "last character keeps being
+    // added and removed" flicker).
+    LaunchedEffect(textFieldState) {
         snapshotFlow { textFieldState.text.toString() }.collect { text ->
-            if (text != query) onQueryChange(text)
+            if (text != currentQuery) onQueryChange(text)
         }
     }
-    // A query change from outside (clearing after a result selection) empties the field.
+    // Query -> field, one case only: the query is cleared from outside (after a search
+    // result is selected or the clear icon is tapped). Never rewrite the field while it
+    // equals the query or the IME is composing — that destroys the composing region and
+    // the IME re-sends the text, looping.
     LaunchedEffect(query) {
-        if (textFieldState.text.toString() != query) {
-            textFieldState.edit { replace(0, length, query) }
+        if (query.isEmpty() && textFieldState.text.isNotEmpty()) {
+            textFieldState.edit { replace(0, length, "") }
         }
     }
     val focusManager = LocalFocusManager.current
