@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 
-APP_LAYER = "compose.preference.sample"
+APP_LAYER = "compose.catalog.demo"
 
 
 def find_shell() -> str:

@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
+package net.slions.compose.catalog.demo
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import timber.log.Timber
+
+class MainActivity : ComponentActivity() {
+    companion object {
+        init {
+            Timber.plant(Timber.DebugTree())
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent { SampleApp() }
     }
 }
-
-rootProject.name = "ComposePreference"
-
-include(":lib", ":demo", ":benchmark")

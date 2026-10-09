@@ -19,7 +19,7 @@ plugins {
 }
 
 android {
-    namespace = "net.slions.compose.preference.benchmark"
+    namespace = "net.slions.compose.catalog.benchmark"
     buildToolsVersion = libs.versions.android.buildTools.get()
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
@@ -30,7 +30,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    targetProjectPath = ":androidSample"
+    targetProjectPath = ":demo"
     // Run the benchmark in its own process (required for macrobenchmark to kill,
     // compile and launch the target). See the androidx.benchmark "self-instrumenting" docs.
     experimentalProperties["android.experimental.self-instrumenting"] = true

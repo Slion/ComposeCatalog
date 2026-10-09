@@ -3,7 +3,7 @@
 Subclasses AutoTest's :class:`~autotest.android.device.AndroidDevice` with the
 concrete app under test: its package, its two hosts (the full-screen settings
 activity and the bottom-sheet activity), and the semantic helpers the tests use
-to drive :func:`~net.slions.compose.preference.PreferencePageScreen` — open a
+to drive :func:`~net.slions.compose.catalog.PreferencePageScreen` — open a
 host, read the visible titles, drive a nested page, and type into the search
 pill.
 
@@ -26,8 +26,8 @@ if _FRAMEWORK.is_dir() and str(_FRAMEWORK) not in sys.path:
 from autotest.android.device import AndroidDevice  # noqa: E402
 
 # The ``sample`` app is the test fixture for the library's screen behavior.
-PACKAGE = "net.slions.compose.preference.sample"
-MAIN = "net.slions.compose.preference.sample/.MainActivity"
+PACKAGE = "net.slions.compose.catalog.demo"
+MAIN = "net.slions.compose.catalog.demo/.MainActivity"
 
 
 class PreferenceDevice(AndroidDevice):

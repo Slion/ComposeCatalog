@@ -25,12 +25,12 @@ This project is consumed as a [git submodule](https://git-scm.com/docs/git-submo
    git submodule update --init --recursive
    ```
 
-2. Include the submodule as a composite build and substitute the `:preference` module for the library coordinate, in your root `settings.gradle.kts`:
+2. Include the submodule as a composite build and substitute the `:lib` module for the library coordinate, in your root `settings.gradle.kts`:
 
    ```kotlin
    includeBuild("third_party/composepreference") {
        dependencySubstitution {
-           substitute(module("net.slions.compose.preference:preference")).using(project(":preference"))
+           substitute(module("net.slions.compose.catalog:lib")).using(project(":lib"))
        }
    }
    ```
@@ -38,10 +38,10 @@ This project is consumed as a [git submodule](https://git-scm.com/docs/git-submo
 3. Depend on the library in the modules that use it:
 
    ```kotlin
-   implementation("net.slions.compose.preference:preference")
+   implementation("net.slions.compose.catalog:lib")
    ```
 
-The composite build ensures the `:preference` module is always used in place of any published artifact.
+The composite build ensures the `:lib` module is always used in place of any published artifact.
 
 ## Core concepts
 
@@ -96,18 +96,18 @@ AppTheme {
 
 Built-in item types include:
 
-- [`Item`](preference/src/main/kotlin/Item.kt)
-- [`Section`](preference/src/main/kotlin/Section.kt)
-- [`ItemCheckbox`](preference/src/main/kotlin/ItemCheckbox.kt)
-- [`ItemFooter`](preference/src/main/kotlin/ItemFooter.kt)
-- [`ItemList`](preference/src/main/kotlin/ItemList.kt) (supports both alert dialog and dropdown menu)
-- [`ItemMultiSelectList`](preference/src/main/kotlin/ItemMultiSelectList.kt)
-- [`ItemRadio`](preference/src/main/kotlin/ItemRadio.kt)
-- [`ItemSlider`](preference/src/main/kotlin/ItemSlider.kt)
-- [`ItemSwitch`](preference/src/main/kotlin/ItemSwitch.kt)
-- [`ItemTextField`](preference/src/main/kotlin/ItemTextField.kt)
-- [`ItemActionIconButton`](preference/src/main/kotlin/ItemActionIconButton.kt)
-- [`ItemActionsSwitch`](preference/src/main/kotlin/ItemActionsSwitch.kt)
+- [`Item`](lib/src/main/kotlin/Item.kt)
+- [`Section`](lib/src/main/kotlin/Section.kt)
+- [`ItemCheckbox`](lib/src/main/kotlin/ItemCheckbox.kt)
+- [`ItemFooter`](lib/src/main/kotlin/ItemFooter.kt)
+- [`ItemList`](lib/src/main/kotlin/ItemList.kt) (supports both alert dialog and dropdown menu)
+- [`ItemMultiSelectList`](lib/src/main/kotlin/ItemMultiSelectList.kt)
+- [`ItemRadio`](lib/src/main/kotlin/ItemRadio.kt)
+- [`ItemSlider`](lib/src/main/kotlin/ItemSlider.kt)
+- [`ItemSwitch`](lib/src/main/kotlin/ItemSwitch.kt)
+- [`ItemTextField`](lib/src/main/kotlin/ItemTextField.kt)
+- [`ItemActionIconButton`](lib/src/main/kotlin/ItemActionIconButton.kt)
+- [`ItemActionsSwitch`](lib/src/main/kotlin/ItemActionsSwitch.kt)
 
 Each built-in item type includes 4 kinds of APIs:
 
@@ -118,7 +118,7 @@ Each built-in item type includes 4 kinds of APIs:
 
 ### Theming
 
-The visual appearance of the items can be customized by providing a custom [`PreferenceTheme`](preference/src/main/kotlin/PreferenceTheme.kt) with `preferenceTheme` to `ProvidePreferenceLocals` or `ProvidePreferenceTheme`.
+The visual appearance of the items can be customized by providing a custom [`PreferenceTheme`](lib/src/main/kotlin/PreferenceTheme.kt) with `preferenceTheme` to `ProvidePreferenceLocals` or `ProvidePreferenceTheme`.
 
 Customizable values in the theme include most dimensions, colors and text styles used by the built-in preferences.
 
@@ -126,7 +126,7 @@ Customizable values in the theme include most dimensions, colors and text styles
 
 The data source of the preferences can be customized by providing a custom `MutableStateFlow<Store>` to `ProvidePreferenceLocals` or `ProvideStore`.
 
-The [`Store`](preference/src/main/kotlin/Store.kt) interface defined in this library is similar to the AndroidX DataStore [`Preferences`](https://developer.android.com/reference/kotlin/androidx/datastore/preferences/core/Preferences) class, but:
+The [`Store`](lib/src/main/kotlin/Store.kt) interface defined in this library is similar to the AndroidX DataStore [`Preferences`](https://developer.android.com/reference/kotlin/androidx/datastore/preferences/core/Preferences) class, but:
 
 - It can be implemented by other mechanisms like [`SharedPreferences`](https://developer.android.com/reference/android/content/SharedPreferences), thanks to being a public interface instead of an abstract class with only an internal constructor.
 - It doesn't have to be produced and updated via a [`DataStore`](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore).
@@ -145,7 +145,7 @@ If AndroidX DataStore is considered more appropriate for your use case, e.g. you
 
 ## Settings screen
 
-[`Catalog`](preference/src/main/kotlin/Catalog.kt) hosts a whole settings tree in a single adaptive screen: a list pane of pages with a search field, and a detail pane showing the selected page's items.
+[`Catalog`](lib/src/main/kotlin/Catalog.kt) hosts a whole settings tree in a single adaptive screen: a list pane of pages with a search field, and a detail pane showing the selected page's items.
 
 ```kotlin
 Catalog(
@@ -178,7 +178,7 @@ Page(
 
 In two-pane mode the current trail is shown as a breadcrumb above the panes (tapping an ancestor jumps back to it); in single-pane mode the back arrow pops one level at a time. Page ids must be unique within the whole tree.
 
-The tree and search helpers live in [`Page.kt`](preference/src/main/kotlin/Page.kt): `walkPages()`, `findPage()`, `findPagePath()`, and `searchPages()`. Search covers the entire tree: [`buildSearchIndex(pages)`](preference/src/main/kotlin/SearchIndex.kt) walks every page's content (including all `subPages`) and records a searchable entry for each item, so `Catalog` can filter both pages and items and scroll to a match.
+The tree and search helpers live in [`Page.kt`](lib/src/main/kotlin/Page.kt): `walkPages()`, `findPage()`, `findPagePath()`, and `searchPages()`. Search covers the entire tree: [`buildSearchIndex(pages)`](lib/src/main/kotlin/SearchIndex.kt) walks every page's content (including all `subPages`) and records a searchable entry for each item, so `Catalog` can filter both pages and items and scroll to a match.
 
 ### Hosting in a bottom sheet or dialog
 

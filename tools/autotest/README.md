@@ -29,8 +29,8 @@ sample.
 3. Build and install the sample app on the target:
 
    ```sh
-   ./gradlew :androidSample:assembleDebug
-   adb install -r androidSample/build/outputs/apk/debug/androidSample-debug.apk
+   ./gradlew :demo:assembleDebug
+   adb install -r demo/build/outputs/apk/debug/demo-debug.apk
    ```
 
 ## Run
