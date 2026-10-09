@@ -90,8 +90,11 @@ internal fun BreadcrumbBar(
     title: String,
     currentPath: List<Page>,
     pagePath: List<String>,
+    showBackButton: Boolean,
+    onBack: () -> Unit,
     onNavigateToPath: (List<String>) -> Unit,
 ) {
+    val nested = currentPath.size > 1
     Surface(
         modifier =
             Modifier
@@ -103,8 +106,12 @@ internal fun BreadcrumbBar(
             modifier = Modifier.fillMaxSize().padding(end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (currentPath.size > 1) {
-                IconButton(onClick = { onNavigateToPath(pagePath.dropLast(1)) }) {
+            if (nested || showBackButton) {
+                IconButton(
+                    onClick = {
+                        if (nested) onNavigateToPath(pagePath.dropLast(1)) else onBack()
+                    },
+                ) {
                     BackChevron()
                 }
             }
@@ -112,7 +119,7 @@ internal fun BreadcrumbBar(
                 text = title,
                 modifier =
                     Modifier.padding(
-                        start = if (currentPath.size > 1) 0.dp else 16.dp,
+                        start = if (nested || showBackButton) 0.dp else 16.dp,
                     ),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -165,6 +172,8 @@ internal fun BreadcrumbBar(
 internal fun ListPane(
     title: String,
     isTwoPane: Boolean,
+    showBackButton: Boolean,
+    onBack: () -> Unit,
     listRows: List<Page>,
     selectedPageId: String?,
     onSelectPage: (String) -> Unit,
@@ -379,13 +388,34 @@ internal fun ListPane(
                             .height(56.dp),
                     color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Text(
-                        text = title,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (showBackButton) {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = onBack) {
+                                BackChevron()
+                            }
+                            Text(
+                                text = title,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = title,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }

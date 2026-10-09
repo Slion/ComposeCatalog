@@ -31,9 +31,10 @@ import net.slions.compose.catalog.cardGroup
 import net.slions.compose.catalog.section
 
 /**
- * The "Theme" page: live theme controls. Its state is hoisted in [SampleApp] as a
- * [SampleThemeValues] and applied by [SampleTheme], so changing a row here re-themes the whole
- * app immediately — a working example of the controlled preference forms.
+ * The "Theme" page: live theme controls. It is hosted by [SettingsActivity] in its own
+ * catalog; its state is hoisted there as a [SampleThemeValues] and applied by [SampleTheme],
+ * so changing a row here re-themes the whole app — a working example of the controlled
+ * preference forms.
  */
 @Composable
 fun themePage(

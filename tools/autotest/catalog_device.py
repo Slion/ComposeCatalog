@@ -62,6 +62,30 @@ class CatalogDevice(AndroidDevice):
         time.sleep(2.0)  # let the sheet expand and its content compose
         return True
 
+    def open_settings_activity(self) -> bool:
+        """Start the settings activity (a second catalog) via its root row.
+
+        Unlike the sheet, this is a real activity launch: its catalog has its own
+        page tree (the theme page) and therefore its own search scope, while
+        sharing the app's store. The root row opens it directly on one tap.
+        """
+        import time
+
+        self.open_main()
+        if not self.tap_title("Settings"):
+            return False
+        time.sleep(2.0)  # let the new activity launch and compose
+        return True
+
+    def in_settings_activity(self) -> bool:
+        """True if the settings activity's catalog is on screen.
+
+        The theme page row only exists in that catalog's tree, so finding it
+        proves the activity launched (the root row's own "Settings" title
+        cannot tell the two apart).
+        """
+        return self.has_title("Theme")
+
     # --- UI state (semantic reads) ---------------------------------------
     def visible_titles(self) -> list[str]:
         """All non-empty visible node texts, in hierarchy order."""

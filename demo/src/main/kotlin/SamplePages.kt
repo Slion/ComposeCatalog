@@ -18,7 +18,9 @@ package net.slions.compose.catalog.demo
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
+import dev.vicart.compose.material.symbols.MaterialSymbol
 import net.slions.compose.catalog.Page
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.itemFooter
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemSwitch
@@ -26,22 +28,15 @@ import net.slions.compose.catalog.itemSwitch
 const val SampleTitle = "Compose Catalog"
 
 /**
- * The sample pages: the live "Theme" page first, then one page per preference type, each
- * exercising the type's various configurations. Card groups and categories are used
- * throughout the pages, so they have no page of their own. Hosted by
+ * The sample pages: one page per item type, each exercising the type's various
+ * configurations. The live "Theme" page is hosted by a separate activity with its own
+ * catalog (see [net.slions.compose.catalog.demo.SettingsActivity]). Card groups and
+ * sections are used throughout the pages, so they have no page of their own. Hosted by
  * [net.slions.compose.catalog.Catalog].
- *
- * @param themeValues the current [SampleThemeValues], applied to the app by [SampleTheme].
- * @param onThemeValuesChange invoked with the next [SampleThemeValues] when the Theme page
- *   changes a setting.
  */
 @Composable
-fun samplePages(
-    themeValues: SampleThemeValues,
-    onThemeValuesChange: (SampleThemeValues) -> Unit,
-): List<Page> =
+fun samplePages(): List<Page> =
     listOf(
-        themePage(themeValues, onThemeValuesChange),
         itemPage(),
         checkboxPage(),
         switchPage(),
@@ -56,6 +51,24 @@ fun samplePages(
         itemActionsSwitchPage(),
         nestedPage(),
     )
+
+/**
+ * A root row that opens the theme settings in a separate activity hosting its own
+ * [net.slions.compose.catalog.Catalog]. It demonstrates that one app can host several
+ * independent catalogs: the settings activity's catalog has its own page tree and a
+ * separate search scope, yet shares the same process-wide store as this one.
+ *
+ * @param onOpen Invoked when the row is tapped, to start the settings activity.
+ */
+fun LazyListScope.settingsRootRow(onOpen: () -> Unit) {
+    item(
+        key = "settings_row",
+        title = "Settings",
+        summary = "A second catalog: its own tree and search, sharing this app's store.",
+        icon = { MaterialSymbol.Outlined(icon = "open_in_new") },
+        onClick = onOpen,
+    )
+}
 
 /**
  * The preferences hosted at the root of the sample tree, below the top-level page rows (via

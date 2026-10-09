@@ -101,11 +101,10 @@ fun SheetSettings(
     maxWidth: Dp = DEFAULT_MAX_SHEET_WIDTH,
 ) {
     ProvidePreferenceLocals {
-        val (themeValues, writeThemeValues) = rememberSampleThemeValues()
         ProvidePreferenceTheme {
             DraggableBottomSheet(onDismiss, maxWidth) { size ->
                 SheetSettingsScreen(
-                    pages = samplePages(themeValues, writeThemeValues),
+                    pages = samplePages(),
                     hostSize = size,
                     onBack = onDismiss,
                     rootContent = { sampleRootContent() },

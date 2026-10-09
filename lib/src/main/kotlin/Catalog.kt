@@ -117,10 +117,17 @@ public class CatalogOptions(
  * @param pages The pages to show in the list pane, in order.
  * @param modifier Modifier applied to the root surface.
  * @param onBack Called when the host should dismiss the screen (i.e. system back while
- * the list pane is on screen in a single-pane layout).
+ * the list pane is on screen in a single-pane layout, or a tap of the title-bar back
+ * button when [showBackButton] is on and the tree is at its root).
  * @param backEnabled Whether the screen's system-back handling is active. A host that
  * covers the screen with its own layer (e.g. a fragment or view shown over it) passes
  * false so that back goes to that layer — and its back stack — first.
+ * @param showBackButton Whether to show a back chevron next to the screen title (the
+ * single-pane title bar and, in two-pane, the breadcrumb). Nested in the tree it pops
+ * one level up, as the existing chevron does; at the root it calls [onBack]. A host
+ * that is not the app's root surface (e.g. an activity opened from another screen)
+ * sets this — with [onBack] closing the host — so the user can return without hunting
+ * the system back.
  * @param adaptiveInfo Adaptive layout info computed for the host of the screen instead
  * of for the window. The screen's adaptive layout (single- vs two-pane) follows this
  * value, which is what a host smaller than the window — e.g. a modal bottom sheet, a
@@ -148,6 +155,7 @@ public fun Catalog(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     backEnabled: Boolean = true,
+    showBackButton: Boolean = false,
     adaptiveInfo: WindowAdaptiveInfo? = null,
     singlePaneOnly: Boolean = false,
     rootContent: LazyListScope.() -> Unit = {},
@@ -434,6 +442,8 @@ public fun Catalog(
                     title = title,
                     currentPath = currentPath,
                     pagePath = pagePath,
+                    showBackButton = showBackButton,
+                    onBack = ::backAction,
                     onNavigateToPath = ::navigateToPath,
                 )
             }
@@ -453,6 +463,8 @@ public fun Catalog(
                         ListPane(
                             title = title,
                             isTwoPane = isTwoPane,
+                            showBackButton = showBackButton,
+                            onBack = ::backAction,
                             listRows = listRows,
                             selectedPageId = selectedPageId,
                             onSelectPage = ::selectPageById,

@@ -16,6 +16,8 @@
 
 package net.slions.compose.catalog.demo
 
+import android.app.Activity
+import android.content.Intent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import net.slions.compose.catalog.Catalog
 import net.slions.compose.catalog.ProvidePreferenceLocals
@@ -36,7 +39,7 @@ import net.slions.compose.catalog.ProvidePreferenceTheme
 fun SampleApp() {
     // The theme flow is the single source of truth; the default flow persists it to disk.
     ProvidePreferenceLocals {
-        val (themeValues, writeThemeValues) = rememberSampleThemeValues()
+        val (themeValues, _) = rememberSampleThemeValues()
         val darkTheme = effectiveDarkTheme(themeValues.themeMode, isSystemInDarkTheme())
         var sheetOpen by rememberSaveable { mutableStateOf(false) }
         CompositionLocalProvider(LocalSampleThemeValues provides themeValues) {
@@ -46,15 +49,32 @@ fun SampleApp() {
                 // captured once, against the outer light scheme, and would not follow the
                 // live light/dark switch.
                 ProvidePreferenceTheme {
+                    val context = LocalContext.current
                     Catalog(
                         title = SampleTitle,
-                        // The common sample pages plus a root row that opens the same tree
-                        // in a bottom sheet in this activity (Android-only, so it is added
-                        // here).
+                        // The common sample pages plus the one page that is Android-only
+                        // (so it is added here, not in samplePages): it opens the same
+                        // tree in a bottom sheet in this activity.
                         pages =
-                            samplePages(themeValues, writeThemeValues) +
+                            samplePages() +
                                 listOf(sheetSettingsPage(onOpenSheet = { sheetOpen = true })),
-                        rootContent = { sampleRootContent() },
+                        // The root rows, plus the row that opens the theme in a separate
+                        // activity running its own catalog (its own search scope, sharing
+                        // this app's store).
+                        rootContent = {
+                            sampleRootContent()
+                            settingsRootRow(
+                                onOpen = {
+                                    context.startActivity(
+                                        Intent(context, SettingsActivity::class.java)
+                                    )
+                                }
+                            )
+                        },
+                        // This is the app's root surface, but the title bar still carries
+                        // a back chevron: at the root of the tree it closes the activity.
+                        onBack = { (context as? Activity)?.finish() },
+                        showBackButton = true,
                     )
                     // The sheet, hosted in this activity over the full-screen screen.
                     if (sheetOpen) {

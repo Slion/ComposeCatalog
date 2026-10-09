@@ -21,7 +21,7 @@ def test_smoke_launch(device, ctx):
     device.open_main()
     assert device.foreground_package() == device.package, "sample app is not foreground"
     assert device.has_title("Compose Catalog"), "screen title is missing"
-    assert device.has_title("Theme"), "the first page (Theme) is not visible"
+    assert device.has_title("Item"), "the first page (Item) is not visible"
 
 
 # --- nested navigation -----------------------------------------------------
@@ -87,6 +87,36 @@ def test_search_finds_nested_page(device, ctx):
     assert device.has_title("Developer"), "search did not surface the nested 'Developer' page"
 
 
+# --- settings activity (a second catalog) ----------------------------------
+
+def test_settings_activity_opens(device, ctx):
+    assert device.open_settings_activity(), "could not open the settings activity"
+    assert device.foreground_package() == device.package, "the app is not foreground"
+    assert device.in_settings_activity(), "the settings activity's catalog is not shown"
+
+
+def test_settings_activity_back_closes(device, ctx):
+    assert device.open_settings_activity(), "could not open the settings activity"
+    assert device.in_settings_activity(), "the settings activity did not open"
+    device.key(keys.BACK)
+    assert device.has_title("Compose Catalog"), \
+        "system back at the root of the settings activity did not close it"
+
+
+def test_settings_search_scope(device, ctx):
+    """The settings activity's catalog has its own search index (theme page only):
+    a query that matches only the main catalog's tree surfaces nothing here, while a
+    theme query does."""
+    assert device.open_settings_activity(), "could not open the settings activity"
+    device.search("nested")
+    assert not device.has_title("Nested"), \
+        "search leaked the main catalog's tree into the settings activity's scope"
+    device.clear_field()
+    device.search("corner")
+    assert device.has_title("Corner"), \
+        "search did not surface the theme page's 'Corner' row"
+
+
 ALL_TESTS = [
     test_smoke_launch,
     test_nested_detail_opens,
@@ -95,6 +125,9 @@ ALL_TESTS = [
     test_sheet_launches,
     test_sheet_single_pane,
     test_search_finds_nested_page,
+    test_settings_activity_opens,
+    test_settings_activity_back_closes,
+    test_settings_search_scope,
 ]
 
 TEST_DESCRIPTIONS = {
@@ -105,6 +138,9 @@ TEST_DESCRIPTIONS = {
     "test_sheet_launches": "Launch the bottom-sheet host; assert it foregrounds with a title.",
     "test_sheet_single_pane": "Assert the sheet navigates single-pane (list replaced by detail).",
     "test_search_finds_nested_page": "Type a query; assert a nested page is surfaced as a result.",
+    "test_settings_activity_opens": "Open the settings activity; assert its catalog foregrounds with a title.",
+    "test_settings_activity_back_closes": "System back at the settings activity's root closes it.",
+    "test_settings_search_scope": "The settings activity's search covers only its own (theme) page.",
 }
 
 FEATURE_GROUPS = {
@@ -112,6 +148,11 @@ FEATURE_GROUPS = {
     "nested": [test_nested_detail_opens, test_nested_deep_and_back, test_nested_breadcrumb],
     "sheet": [test_sheet_launches, test_sheet_single_pane],
     "search": [test_search_finds_nested_page],
+    "settings": [
+        test_settings_activity_opens,
+        test_settings_activity_back_closes,
+        test_settings_search_scope,
+    ],
 }
 
 DEFAULT_GROUP = "smoke"
