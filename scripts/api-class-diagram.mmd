@@ -203,8 +203,8 @@ class CardItem {
   <<data>>
   +title: String
   +summary: String?
-  +icon: Composable?
-  +value: String
+  +page: Page?
+  +content: Composable
 }
 class CardRow {
   <<data>>
@@ -286,6 +286,7 @@ Section --|> Item : is a
 CardGroup ..> CardScope : dsl
 CardGroup ..> CardGroupScope : dsl
 CardGroup ..> CardStyle : style
+CardItem --> Page : page (optional)
 CardRow --> CardItem : items
 CardRow --|> Item : is a
 LiveItemSlider --|> Item : is a

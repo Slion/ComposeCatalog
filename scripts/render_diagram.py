@@ -25,16 +25,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <title>__TITLE__</title>
 <script src="mermaid.min.js"></script>
 <style>
-  body { margin: 0; font-family: system-ui, sans-serif; background: #1e1e1e; color: #ddd; }
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    font-family: system-ui, sans-serif; background: #1e1e1e; color: #ddd;
+  }
   #toolbar {
-    position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; align-items: center;
+    flex: none; z-index: 10; display: flex; gap: 8px; align-items: center;
     padding: 8px 12px; background: #252526; border-bottom: 1px solid #3c3c3c;
   }
   #toolbar h1 { font-size: 14px; margin: 0 auto 0 0; font-weight: 600; color: #e0e0e0; }
   #toolbar button { padding: 4px 12px; cursor: pointer; }
+  #zoom { display: flex; align-items: center; gap: 4px; margin-left: 8px; }
+  #zoom-level { font-size: 12px; color: #888; min-width: 44px; text-align: center; }
   #hint { font-size: 12px; color: #888; }
   #legend { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; }
-  #canvas { overflow: auto; }
+  #canvas { flex: 1 1 auto; overflow: auto; }
   #canvas svg { display: block; margin: 24px; user-select: none; }
   #canvas g.node { cursor: grab; }
   #canvas g.node:active { cursor: grabbing; }
@@ -52,12 +57,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
 <div id="toolbar">
   <button id="reset">Reset layout</button>
+  <span id="zoom">
+    <button id="zoom-out" title="Zoom out (Ctrl + mouse wheel)">&minus;</button>
+    <button id="zoom-reset" title="Reset zoom"><span id="zoom-level">100%</span></button>
+    <button id="zoom-in" title="Zoom in (Ctrl + mouse wheel)">+</button>
+  </span>
   <h1>__TITLE__</h1>
   <span id="legend">
     <svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#d3d3d3" stroke-width="1.6"/></svg> is-a / uses
     <svg width="26" height="8" style="margin-left:10px"><line x1="0" y1="4" x2="26" y2="4" stroke="#6ea8ff" stroke-width="1.2" stroke-dasharray="8 6"/></svg> dependency
   </span>
-  <span id="hint">Drag a class to move it; connected edges follow.</span>
+  <span id="hint">Drag a class to move it; drag the background to pan; connected edges follow.</span>
 </div>
 <div id="canvas"></div>
 <script type="text/plain" id="diagram">
@@ -86,7 +96,65 @@ mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'dark' }
   if (edgeLabels) svg.appendChild(edgeLabels);
   fixMarkerTips(svg);
   setupDrag(svg);
+  setupPan(svg);
+  setupZoom(svg);
 })();
+// Pan: dragging the background (anywhere that is not a node) scrolls the
+// canvas, so the diagram can be moved around at any zoom level.
+function setupPan(svg) {
+  const canvas = document.getElementById('canvas');
+  let pan = null;
+  svg.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
+    if (ev.target.closest && ev.target.closest('g.node')) return;
+    ev.preventDefault();
+    pan = { sx: ev.clientX, sy: ev.clientY, sl: canvas.scrollLeft, st: canvas.scrollTop };
+    svg.setPointerCapture(ev.pointerId);
+  });
+  svg.addEventListener('pointermove', (ev) => {
+    if (!pan) return;
+    canvas.scrollLeft = pan.sl - (ev.clientX - pan.sx);
+    canvas.scrollTop = pan.st - (ev.clientY - pan.sy);
+  });
+  svg.addEventListener('pointerup', () => { pan = null; });
+  svg.addEventListener('pointercancel', () => { pan = null; });
+}
+// Zoom: the SVG has a viewBox, so changing its rendered width scales it 1:1.
+// The content point under the reference viewport position (vx, vy — viewport
+// center by default, or the cursor for wheel zoom) is kept fixed.
+function setupZoom(svg) {
+  const canvas = document.getElementById('canvas');
+  const level = document.getElementById('zoom-level');
+  // The SVG has a fixed height (width=100%), so scaling only the width would
+  // letterbox it; pin both dimensions from the natural rendered size.
+  const base = svg.getBoundingClientRect();
+  const baseWidth = base.width, baseHeight = base.height;
+  let zoom = 1;
+  function setZoom(nz, vx, vy) {
+    const z0 = zoom;
+    zoom = Math.min(4, Math.max(0.25, nz));
+    if (zoom === z0) return;
+    if (vx == null) vx = canvas.clientWidth / 2;
+    if (vy == null) vy = canvas.clientHeight / 2;
+    const cx = canvas.scrollLeft + vx;
+    const cy = canvas.scrollTop + vy;
+    svg.style.width = (baseWidth * zoom) + 'px';
+    svg.style.height = (baseHeight * zoom) + 'px';
+    canvas.scrollLeft = cx * (zoom / z0) - vx;
+    canvas.scrollTop = cy * (zoom / z0) - vy;
+    level.textContent = Math.round(zoom * 100) + '%';
+  }
+  document.getElementById('zoom-in').addEventListener('click', () => setZoom(zoom * 1.25));
+  document.getElementById('zoom-out').addEventListener('click', () => setZoom(zoom / 1.25));
+  document.getElementById('zoom-reset').addEventListener('click', () => setZoom(1));
+  // Ctrl/Cmd + wheel zooms around the cursor (matches browser page-zoom habit).
+  canvas.addEventListener('wheel', (ev) => {
+    if (!ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    const c = canvas.getBoundingClientRect();
+    setZoom(zoom * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX - c.left, ev.clientY - c.top);
+  }, { passive: false });
+}
 // Our paths start/end exactly on the box borders, so each marker must be anchored
 // so its body stays OUT of the box:
 //  - End markers (arrowheads): anchor the TIP (max x) on the border.
