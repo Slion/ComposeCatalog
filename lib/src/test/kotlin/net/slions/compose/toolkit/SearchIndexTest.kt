@@ -110,6 +110,46 @@ class SearchIndexTest {
     }
 
     @Test
+    fun `results are ranked by relevance, exact page title first`() {
+        val exactPage = Page(id = "exact", title = "Group") {
+            itemSwitch("g-row", value = false, onValueChange = {}, title = "Group row")
+        }
+        val partialPage = Page(id = "partial", title = "Group settings") {}
+        val entryPage = Page(id = "entry", title = "Other") {
+            itemSwitch("e-row", value = false, onValueChange = {}, title = "The group")
+        }
+        val summaryPage = Page(id = "summary", title = "Misc", summary = "About groups") {}
+        val tree =
+            Page(id = "root", title = "Root") {
+                item(page = entryPage)
+                item(page = summaryPage)
+                item(page = exactPage)
+                item(page = partialPage)
+            }
+        val entries =
+            buildSearchEntries(
+                tree,
+                searchPages(tree, buildSearchIndex(tree), "Group"),
+                "Group",
+                "Root",
+            )
+        // Exact page title first, then the page title containing the query, then the
+        // entry titles containing it (walk order kept: the "entry" page precedes the
+        // "exact" page), and the summary-only match last. The page row is shown even
+        // though the "exact" page also has a matching entry.
+        assertEquals(
+            listOf(
+                "exact" to null,
+                "partial" to null,
+                "entry" to "e-row",
+                "exact" to "g-row",
+                "summary" to null,
+            ),
+            entries.map { it.page.id to it.entry?.key },
+        )
+    }
+
+    @Test
     fun `record outside a walk is a no-op`() {
         assertNull(SearchIndexer.record("k", "t"))
     }

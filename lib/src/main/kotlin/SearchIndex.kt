@@ -146,11 +146,13 @@ public fun buildSearchIndex(root: Page): Map<String, List<SearchIndexEntry>> =
     buildPageStructure(root).mapValues { it.value.entries }
 
 /**
- * Flattens the search [matches] into the result rows the list pane shows, in display
- * order (the root page first, as in the walk). A row gets a unique id (several rows can
- * share an entry key, e.g. the rows of the same card), so the results list can key on
- * it. [title] is the screen title, shown as the path of the root page's rows (the root
- * is the screen itself, so it has no trail segment).
+ * Flattens the search [matches] into the result rows the list pane shows, ordered by
+ * relevance: a page whose title is exactly the query first, then pages whose title
+ * contains it, then entries whose title contains it, and finally matches that only hit
+ * a summary. Within a rank the tree order (the walk order) is kept. A row gets a unique
+ * id (several rows can share an entry key, e.g. the rows of the same card), so the
+ * results list can key on it. [title] is the screen title, shown as the path of the
+ * root page's rows (the root is the screen itself, so it has no trail segment).
  *
  * A pure function so it can be memoized (e.g. in `remember`) and unit-tested.
  */
@@ -160,40 +162,67 @@ internal fun buildSearchEntries(
     query: String,
     title: String,
 ): List<SearchEntry> {
+    val q = query.trim().lowercase()
     var rowId = 0
-    return buildList {
-        matches.forEach { match ->
-            // The page's trail in the tree (e.g. "Nested > Advanced"), shown under each
-            // of its result rows; the root's trail is the screen title.
-            val path =
-                (findPagePath(root, match.page.id)?.drop(1)?.map { it.title } ?: emptyList())
-                    .joinToString(" > ")
-                    .ifEmpty { title }
-            if (match.matches.isEmpty()) {
-                // The page itself matched (by title/summary): show the page row.
-                add(
+    val ranked = mutableListOf<Pair<Int, SearchEntry>>()
+    matches.forEach { match ->
+        // The page's trail in the tree (e.g. "Nested > Advanced"), shown under each of
+        // its result rows; the root's trail is the screen title.
+        val path =
+            (findPagePath(root, match.page.id)?.drop(1)?.map { it.title } ?: emptyList())
+                .joinToString(" > ")
+                .ifEmpty { title }
+        if (match.pageMatched) {
+            // The page itself matched (by title/summary): show the page row, even when
+            // some of the page's entries matched as well.
+            ranked.add(
+                pageMatchRank(match.page, q)
+                    to
                     SearchEntry(
                         id = rowId++,
                         page = match.page,
                         path = path,
                         entry = null,
                     )
-                )
-            }
-            // One row per matching preference entry of the page.
-            addAll(
-                match.matches.map {
+            )
+        }
+        // One row per matching preference entry of the page.
+        match.matches.forEach { entry ->
+            ranked.add(
+                entryMatchRank(entry, q)
+                    to
                     SearchEntry(
                         id = rowId++,
                         page = match.page,
                         path = path,
-                        entry = it,
+                        entry = entry,
                     )
-                },
             )
         }
     }
+    // Stable sort: relevance first, the tree order kept within a rank.
+    return ranked.sortedBy { it.first }.map { it.second }
 }
+
+/**
+ * The relevance rank of a page that matched [q]: an exact title match first (0), then a
+ * title that merely contains the query (1); a page that only matched by its summary is
+ * least relevant (3).
+ */
+private fun pageMatchRank(page: Page, q: String): Int =
+    when {
+        q.isEmpty() -> 0
+        page.title.lowercase() == q -> 0
+        page.title.lowercase().contains(q) -> 1
+        else -> 3 // matched by its summary only
+    }
+
+/**
+ * The relevance rank of a preference entry that matched [q]: a title match (2) is more
+ * relevant than a summary-only match (3).
+ */
+private fun entryMatchRank(entry: SearchIndexEntry, q: String): Int =
+    if (entry.titleLowercase.contains(q)) 2 else 3
 
 /** Collects the [SearchIndexEntry]s of a page's preference tree, in registration order. */
 @PublishedApi

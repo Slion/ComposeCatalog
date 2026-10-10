@@ -102,10 +102,15 @@ public fun findPagePath(root: Page, id: String): List<Page>? {
 /**
  * A search result: a [page] whose title/summary or [matches] (entries of the preference
  * tree, see [buildSearchIndex]) contain the query.
+ *
+ * @property pageMatched True when the page's own title or summary contains the query. The
+ * result can also come from matching entries alone, in which case the page itself is not
+ * a match and its row must not be shown.
  */
 public data class PageMatch(
     public val page: Page,
     public val matches: List<SearchIndexEntry>,
+    public val pageMatched: Boolean = false,
 )
 
 /**
@@ -127,14 +132,14 @@ public fun searchPages(
         return listOf(PageMatch(root, emptyList()))
     }
     return root.walkPages().mapNotNull { page ->
-        val pageMatches =
+        val pageMatched =
             page.title.lowercase().contains(q) || page.summary?.lowercase()?.contains(q) == true
         // Entries use the lowercase precomputed at index-build time.
         val matchingEntries = (index[page.id] ?: emptyList()).filter {
             it.titleLowercase.contains(q) || it.summaryLowercase?.contains(q) == true
         }
-        if (pageMatches || matchingEntries.isNotEmpty()) {
-            PageMatch(page = page, matches = matchingEntries)
+        if (pageMatched || matchingEntries.isNotEmpty()) {
+            PageMatch(page = page, matches = matchingEntries, pageMatched = pageMatched)
         } else {
             null
         }
