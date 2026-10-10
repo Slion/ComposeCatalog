@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.ItemRadio
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.itemRadio
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.ItemRadio
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.itemRadio
 import androidx.compose.runtime.MutableState
-import net.slions.compose.catalog.rememberValue
+import net.slions.compose.toolkit.rememberValue
 
 /**
- * The [net.slions.compose.catalog.ItemRadio] page. The rows have no icon of their
+ * The [net.slions.compose.toolkit.ItemRadio] page. The rows have no icon of their
  * own (the radio button is the icon); selection is held per group (by the lazy builder where
  * possible, and with [rememberSaveable] in the composable card group rows).
  */

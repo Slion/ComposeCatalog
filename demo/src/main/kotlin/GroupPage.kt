@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,17 +29,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.ItemSwitch
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.rememberValue
-import net.slions.compose.catalog.section
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.ItemSwitch
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.rememberValue
+import net.slions.compose.toolkit.section
 
 /**
- * The [net.slions.compose.catalog.group] page: a group is a list of items, each drawn in its
+ * The [net.slions.compose.toolkit.group] page: a group is a list of items, each drawn in its
  * own card, so the group looks like one card split into rows. The card is a *style* of the
- * group ([CardStyle]) or of a single row ([net.slions.compose.catalog.item] with [style]),
+ * group ([CardStyle]) or of a single row ([net.slions.compose.toolkit.item] with [style]),
  * not a logical container.
  *
  * @param colorScheme The ambient color scheme, resolved by the caller (the page's content is

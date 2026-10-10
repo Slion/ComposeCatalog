@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.benchmark
+package net.slions.compose.toolkit.benchmark
 
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BenchmarkScenarios {
 
-    private val app = "net.slions.compose.catalog.demo"
+    private val app = "net.slions.compose.toolkit.demo"
 
     @get:Rule
     val rule = MacrobenchmarkRule()

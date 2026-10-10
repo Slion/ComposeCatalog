@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.ItemActionsSwitch
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.rememberValue
-import net.slions.compose.catalog.itemActionsSwitch
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.ItemActionsSwitch
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.rememberValue
+import net.slions.compose.toolkit.itemActionsSwitch
 
 /**
- * The [net.slions.compose.catalog.ItemActionsSwitch] page: a row with a switch as the
+ * The [net.slions.compose.toolkit.ItemActionsSwitch] page: a row with a switch as the
  * second target, plus a click on the main target.
  */
 fun itemActionsSwitchPage(): Page =
@@ -113,7 +113,7 @@ fun itemActionsSwitchPage(): Page =
                 )
             }
             item(title = "Card group row 2", summary = "Each card group item is its own card.") {
-                net.slions.compose.catalog.Item(
+                net.slions.compose.toolkit.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
                 )

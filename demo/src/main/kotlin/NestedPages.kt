@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Expand
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import dev.vicart.compose.material.symbols.MaterialSymbol
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.itemCheckbox
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.itemSwitch
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.itemCheckbox
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.itemSwitch
 
 /**
  * The "Nested" page: a page tree used to test the screen's nested navigation. It has two

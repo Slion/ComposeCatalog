@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
@@ -26,16 +26,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.ItemTextField
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.rememberValue
-import net.slions.compose.catalog.itemTextField
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.ItemTextField
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.rememberValue
+import net.slions.compose.toolkit.itemTextField
 
-/** The [net.slions.compose.catalog.ItemTextField] page: string and numeric values. */
+/** The [net.slions.compose.toolkit.ItemTextField] page: string and numeric values. */
 fun textFieldPage(): Page =
     Page(
         id = "text_field",
@@ -130,7 +130,7 @@ fun textFieldPage(): Page =
                 )
             }
             item(title = "Card group row 2", summary = "Each card group item is its own card.") {
-                net.slions.compose.catalog.Item(
+                net.slions.compose.toolkit.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
                 )

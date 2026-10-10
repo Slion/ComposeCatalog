@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
@@ -26,14 +26,14 @@ import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.AnnotatedString
 import dev.vicart.compose.material.symbols.MaterialSymbol
-import net.slions.compose.catalog.ItemList
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.section
+import net.slions.compose.toolkit.ItemList
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.section
 
 /**
  * The "Theme" page: live theme controls. It is hosted by [SettingsActivity] in its own
- * catalog; its state is hoisted there as a [SampleThemeValues] and applied by [SampleTheme],
+ * Catalog; its state is hoisted there as a [SampleThemeValues] and applied by [SampleTheme],
  * so changing a row here re-themes the whole app — a working example of the controlled
  * preference forms.
  */

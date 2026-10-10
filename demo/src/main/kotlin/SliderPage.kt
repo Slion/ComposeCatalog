@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -29,18 +29,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.ItemSlider
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.rememberValue
-import net.slions.compose.catalog.itemSlider
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.ItemSlider
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.rememberValue
+import net.slions.compose.toolkit.itemSlider
 import kotlin.math.roundToInt
 
 /**
- * The [net.slions.compose.catalog.ItemSlider] page: stateful and value-based. The value
+ * The [net.slions.compose.toolkit.ItemSlider] page: stateful and value-based. The value
  * of the value-based slider is hoisted to the host composable (a page is plain data, and
  * its rows are not a composable scope).
  */
@@ -154,7 +154,7 @@ fun sliderPage(valueBasedState: MutableFloatState): Page {
                 )
             }
             item(title = "Card group row 2", summary = "Each card group item is its own card.") {
-                net.slions.compose.catalog.Item(
+                net.slions.compose.toolkit.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
                 )

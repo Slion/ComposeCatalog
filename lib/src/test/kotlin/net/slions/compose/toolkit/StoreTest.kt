@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog
+package net.slions.compose.toolkit
 
 import org.junit.Test
 import kotlin.test.assertEquals

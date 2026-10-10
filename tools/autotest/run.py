@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI entry point for the Compose Catalog device-UI tests.
+"""CLI entry point for the Compose Toolkit device-UI tests.
 
 A thin wrapper over the AutoTest framework: it builds the sample app's
 :class:`~autotest.Suite` and runs it. The framework is imported from the

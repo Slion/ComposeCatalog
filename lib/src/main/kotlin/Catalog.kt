@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog
+package net.slions.compose.toolkit
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
@@ -370,7 +370,7 @@ public fun Catalog(
         }
     val index = remember(structures) { structures.mapValues { it.value.entries } }
     // Pages whose row carries an action (e.g. launching an activity that hosts the page
-    // in its own catalog) instead of a navigable detail. They are not viewable pages, so
+    // in its own Catalog) instead of a navigable detail. They are not viewable pages, so
     // a search result for one navigates to its row (scroll and highlight) rather than
     // opening it; tapping the row itself still runs the action.
     val actionPageIds =

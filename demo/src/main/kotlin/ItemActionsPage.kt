@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,16 +30,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import net.slions.compose.catalog.Item
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.itemActions
+import net.slions.compose.toolkit.Item
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.itemActions
 
 /**
- * The [net.slions.compose.catalog.ItemActions] page: a row with a second target
+ * The [net.slions.compose.toolkit.ItemActions] page: a row with a second target
  * (anything composable) after a vertical divider.
  */
 fun itemActionsPage(): Page =
@@ -117,7 +117,7 @@ fun itemActionsPage(): Page =
                 ItemActionsRowSample()
             }
             item(title = "Card group row 2", summary = "Each card group item is its own card.") {
-                net.slions.compose.catalog.Item(
+                net.slions.compose.toolkit.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
                 )
@@ -127,7 +127,7 @@ fun itemActionsPage(): Page =
 
 @Composable
 private fun ItemActionsRowSample() {
-    net.slions.compose.catalog.ItemActions(
+    net.slions.compose.toolkit.ItemActions(
         title = "Card group two target",
         summary = "A two-target row inside a card group.",
         secondTarget = {

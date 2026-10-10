@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import net.slions.compose.catalog.rememberValue
+import net.slions.compose.toolkit.rememberValue
 
 /**
  * The sample's version of the library's stateful `*Item` builders: it remembers a

@@ -1,4 +1,4 @@
-"""The Compose Catalog demo device-UI test suite.
+"""The Compose Toolkit demo device-UI test suite.
 
 Plain ``test_*(device, ctx)`` functions that raise :class:`AssertionError` on
 failure, written against the generic :class:`~autotest.device.Device` contract
@@ -22,7 +22,7 @@ from autotest import keys
 def test_smoke_launch(device, ctx):
     device.open_main(wait=6.0)
     assert device.foreground_package() == device.package, "sample app is not foreground"
-    assert device.has_title("Compose Catalog"), "screen title is missing"
+    assert device.has_title("Compose Toolkit"), "screen title is missing"
     assert device.has_title("Item"), "the first page (Item) is not visible"
 
 
@@ -67,7 +67,7 @@ def test_nested_breadcrumb(device, ctx):
 def test_sheet_launches(device, ctx):
     assert device.open_sheet_inapp(), "could not open the bottom sheet from the app"
     assert device.foreground_package() == device.package, "the app is not foreground"
-    assert device.sheet_contains("Compose Catalog"), "the sheet title is missing"
+    assert device.sheet_contains("Compose Toolkit"), "the sheet title is missing"
 
 
 def test_sheet_single_pane(device, ctx):
@@ -90,31 +90,31 @@ def test_search_finds_nested_page(device, ctx):
     assert device.has_title("Developer"), "search did not surface the nested 'Developer' page"
 
 
-# --- settings activity (a second catalog) ----------------------------------
+# --- settings activity (a second Catalog) ----------------------------------
 
 def test_settings_activity_opens(device, ctx):
     assert device.open_settings_activity(), "could not open the settings activity"
     assert device.foreground_package() == device.package, "the app is not foreground"
-    assert device.in_settings_activity(), "the settings activity's catalog is not shown"
+    assert device.in_settings_activity(), "the settings activity's Catalog is not shown"
 
 
 def test_settings_activity_back_closes(device, ctx):
     assert device.open_settings_activity(), "could not open the settings activity"
     assert device.in_settings_activity(), "the settings activity did not open"
     device.key(keys.BACK)
-    assert device.has_title("Compose Catalog"), \
+    assert device.has_title("Compose Toolkit"), \
         "system back at the root of the settings activity did not close it"
 
 
 def test_settings_search_scope(device, ctx):
-    """The settings activity's catalog has its own search index (theme page only):
-    a query that matches only the main catalog's tree surfaces nothing here, while a
+    """The settings activity's Catalog has its own search index (theme page only):
+    a query that matches only the main Catalog's tree surfaces nothing here, while a
     theme query does."""
     assert device.open_settings_activity(), "could not open the settings activity"
     device.search("nested")
     time.sleep(1.0)  # let the result list settle before asserting
     assert not device.has_title("Nested"), \
-        "search leaked the main catalog's tree into the settings activity's scope"
+        "search leaked the main Catalog's tree into the settings activity's scope"
     device.clear_field()
     device.search("corner")
     time.sleep(2.0)  # let the result list settle before asserting
@@ -143,7 +143,7 @@ TEST_DESCRIPTIONS = {
     "test_sheet_launches": "Launch the bottom-sheet host; assert it foregrounds with a title.",
     "test_sheet_single_pane": "Assert the sheet navigates single-pane (list replaced by detail).",
     "test_search_finds_nested_page": "Type a query; assert a nested page is surfaced as a result.",
-    "test_settings_activity_opens": "Open the settings activity; assert its catalog foregrounds with a title.",
+    "test_settings_activity_opens": "Open the settings activity; assert its Catalog foregrounds with a title.",
     "test_settings_activity_back_closes": "System back at the settings activity's root closes it.",
     "test_settings_search_scope": "The settings activity's search covers only its own (theme) page.",
 }

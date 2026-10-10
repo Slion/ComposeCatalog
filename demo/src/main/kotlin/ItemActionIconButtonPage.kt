@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import net.slions.compose.catalog.Item
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.section
-import net.slions.compose.catalog.itemActionIconButton
+import net.slions.compose.toolkit.Item
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.section
+import net.slions.compose.toolkit.itemActionIconButton
 
 /**
- * The [net.slions.compose.catalog.ItemActionIconButton] page: a row with an icon
+ * The [net.slions.compose.toolkit.ItemActionIconButton] page: a row with an icon
  * button as the second target.
  */
 fun itemActionIconButtonPage(): Page =
@@ -93,7 +93,7 @@ fun itemActionIconButtonPage(): Page =
         item(key = "ttib_card", title = "Card icon button", summary = "Static row drawn in a card.", style = CardStyle.Filled)
         group {
             item(title = "Card group icon button", summary = "A two-target row inside a card group.") {
-                net.slions.compose.catalog.ItemActionIconButton(
+                net.slions.compose.toolkit.ItemActionIconButton(
                     title = "Card group icon button",
                     summary = "A two-target row inside a card group.",
                     iconButtonIcon = {
@@ -106,7 +106,7 @@ fun itemActionIconButtonPage(): Page =
                 )
             }
             item(title = "Card group row 2", summary = "Each card group item is its own card.") {
-                net.slions.compose.catalog.Item(
+                net.slions.compose.toolkit.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",
                 )

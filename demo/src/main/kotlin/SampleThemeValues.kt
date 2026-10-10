@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import android.os.Build
 import androidx.compose.material3.ColorScheme
@@ -31,9 +31,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.ColorUtils
 import kotlinx.coroutines.flow.MutableStateFlow
-import net.slions.compose.catalog.LocalStore
-import net.slions.compose.catalog.MutableStore
-import net.slions.compose.catalog.Store
+import net.slions.compose.toolkit.LocalStore
+import net.slions.compose.toolkit.MutableStore
+import net.slions.compose.toolkit.Store
 
 /**
  * The user-selectable theme properties the sample's "Theme" page can change.

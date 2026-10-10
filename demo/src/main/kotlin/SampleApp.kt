@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import android.app.Activity
 import android.content.Intent
@@ -27,13 +27,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import net.slions.compose.catalog.Catalog
-import net.slions.compose.catalog.ProvidePreferenceLocals
-import net.slions.compose.catalog.ProvidePreferenceTheme
+import net.slions.compose.toolkit.Catalog
+import net.slions.compose.toolkit.ProvidePreferenceLocals
+import net.slions.compose.toolkit.ProvidePreferenceTheme
 
 /**
  * The root of the sample app: the pages hosted by
- * [net.slions.compose.catalog.Catalog] (adaptive two-pane layout).
+ * [net.slions.compose.toolkit.Catalog] (adaptive two-pane layout).
  */
 @Composable
 fun SampleApp() {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog
+package net.slions.compose.toolkit
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
  * item). It
  * only defaults its action: tapping a page row navigates into [page], unless [onClick]
  * is set, in which case the action runs instead (e.g. launching an activity that hosts
- * the page in its own catalog), and the trailing action icon indicates which — a chevron
+ * the page in its own Catalog), and the trailing action icon indicates which — a chevron
  * for navigation, an open-in-new for an action, or a custom [actionIcon].
  *
  * @param key The lazy list key of the row, and the preference state key. If null,
@@ -157,11 +157,11 @@ public fun LazyListScope.item(
 
 /**
  * The id of the page currently open in the detail pane, so a page row can highlight
- * itself; null when no page is open. Provided by the catalog's panes.
+ * itself; null when no page is open. Provided by the Catalog's panes.
  */
 /**
  * The navigation callback of the pane hosting a page row: invoked with the page id to
- * navigate into it. Provided by the catalog's panes.
+ * navigate into it. Provided by the Catalog's panes.
  */
 internal val LocalOnSelectPage: ProvidableCompositionLocal<(String) -> Unit> =
     compositionLocalOf { { } }

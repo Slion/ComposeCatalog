@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog
+package net.slions.compose.toolkit
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -138,7 +138,7 @@ public data class GroupItem(
     public val enabled: Boolean = true,
     /**
      * The click action of a data row; for a page row, when null the row navigates into
-     * [page], and it is also recorded on the child-page reference so the catalog can apply
+     * [page], and it is also recorded on the child-page reference so the Catalog can apply
      * it (auto-open filler, search results).
      */
     public val onClick: (() -> Unit)? = null,

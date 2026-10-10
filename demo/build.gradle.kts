@@ -20,11 +20,11 @@ plugins {
 }
 
 android {
-    namespace = "net.slions.compose.catalog.demo"
+    namespace = "net.slions.compose.toolkit.demo"
     buildToolsVersion = libs.versions.android.buildTools.get()
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
-        applicationId = "net.slions.compose.catalog.demo"
+        applicationId = "net.slions.compose.toolkit.demo"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = providers.gradleProperty("VERSION_CODE").get().toInt()

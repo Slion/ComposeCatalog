@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
-import net.slions.compose.catalog.Item
-import net.slions.compose.catalog.ItemSlider
+import net.slions.compose.toolkit.Item
+import net.slions.compose.toolkit.ItemSlider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

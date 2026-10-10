@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -48,12 +48,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyListScope
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.Catalog
-import net.slions.compose.catalog.ProvidePreferenceLocals
-import net.slions.compose.catalog.ProvidePreferenceTheme
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.windowAdaptiveInfoFor
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.Catalog
+import net.slions.compose.toolkit.ProvidePreferenceLocals
+import net.slions.compose.toolkit.ProvidePreferenceTheme
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.windowAdaptiveInfoFor
 
 /**
  * The default maximum width of the in-activity bottom sheet: on wide windows (an unfolded

@@ -1,10 +1,10 @@
-# Compose Catalog device-UI tests
+# Compose Toolkit device-UI tests
 
 Device-UI tests for the `sample` app, which doubles as the fixture for the
 library's screen behavior. Built on the
 [AutoTest](https://github.com/Slion/AutoTest) framework (a git submodule at
 [`../../subs/AutoTest`](../../subs/AutoTest)): the framework is app-agnostic, and this
-directory holds the **app profile** and the **tests** for the Compose Catalog
+directory holds the **app profile** and the **tests** for the Compose Toolkit
 sample.
 
 ## Layout

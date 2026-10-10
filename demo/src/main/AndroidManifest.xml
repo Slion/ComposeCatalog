@@ -24,7 +24,7 @@
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Compose Catalog"
+        android:label="Compose Toolkit"
         android:resizeableActivity="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sample"

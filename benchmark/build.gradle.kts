@@ -19,7 +19,7 @@ plugins {
 }
 
 android {
-    namespace = "net.slions.compose.catalog.benchmark"
+    namespace = "net.slions.compose.toolkit.benchmark"
     buildToolsVersion = libs.versions.android.buildTools.get()
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {

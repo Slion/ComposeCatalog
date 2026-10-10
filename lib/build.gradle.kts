@@ -22,7 +22,7 @@ plugins {
 }
 
 android {
-    namespace = "net.slions.compose.catalog"
+    namespace = "net.slions.compose.toolkit"
     buildToolsVersion = libs.versions.android.buildTools.get()
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig { minSdk = libs.versions.android.minSdk.get().toInt() }

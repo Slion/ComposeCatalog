@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -30,12 +30,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CardDefaults
-import net.slions.compose.catalog.Item
-import net.slions.compose.catalog.CardStyle
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.item
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.section
+import net.slions.compose.toolkit.Item
+import net.slions.compose.toolkit.CardStyle
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.item
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.section
 
 /**
  * The [Item] page: plain rows with the various title/summary/icon configurations. The

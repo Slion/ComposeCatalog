@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog.demo
+package net.slions.compose.toolkit.demo
 
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,13 +23,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import net.slions.compose.catalog.ItemSwitch
-import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.group
-import net.slions.compose.catalog.rememberValue
-import net.slions.compose.catalog.section
+import net.slions.compose.toolkit.ItemSwitch
+import net.slions.compose.toolkit.Page
+import net.slions.compose.toolkit.group
+import net.slions.compose.toolkit.rememberValue
+import net.slions.compose.toolkit.section
 
-const val SampleTitle = "Compose Catalog"
+const val SampleTitle = "Compose Toolkit"
 
 /**
  * The root page of the sample tree, shared by every sample host (the full-screen screen
@@ -39,7 +39,7 @@ const val SampleTitle = "Compose Catalog"
  *
  * The action rows carry an [item] action that replaces navigation — their trailing action
  * icon is the open-in-new (not the page-row chevron) accordingly: the Settings row opens
- * the theme in a separate activity hosting its own [net.slions.compose.catalog.Catalog]
+ * the theme in a separate activity hosting its own [net.slions.compose.toolkit.Catalog]
  * (its own page tree and a separate search scope, yet the same process-wide store), and
  * the Sheet row opens this very tree in a bottom sheet in the current activity. The live
  * "Theme" page is not part of this tree at all: it is hosted only by that activity.
@@ -88,7 +88,7 @@ fun sampleRootPage(
                     Page(
                         id = "settings_activity",
                         title = "Settings",
-                        summary = "A second catalog: its own tree and search, sharing this app's store.",
+                        summary = "A second Catalog: its own tree and search, sharing this app's store.",
                     ) {},
                 onClick = onOpenSettings,
             )

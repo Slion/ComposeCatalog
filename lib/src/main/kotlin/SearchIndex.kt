@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.slions.compose.catalog
+package net.slions.compose.toolkit
 
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
@@ -74,7 +74,7 @@ internal object SearchIndexer {
  * A child-page reference registered by a page row ([item] with a [Page]): the child page,
  * an optional action
  * that replaces navigation when the row is tapped (e.g. launching an activity that
- * hosts the page in its own catalog), the index of the row in the owning page's lazy
+ * hosts the page in its own Catalog), the index of the row in the owning page's lazy
  * list, and the key of the lazy list item that hosts the row (so a search result can
  * highlight it; null when the row cannot be highlighted).
  */
