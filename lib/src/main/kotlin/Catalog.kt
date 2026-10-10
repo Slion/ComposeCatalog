@@ -49,8 +49,12 @@ import androidx.window.core.layout.WindowSizeClass
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** How long a search-selected preference row stays highlighted in the detail pane. */
-private const val HIGHLIGHT_DURATION_MS = 2000L
+/**
+ * How long a search-selected preference row stays highlighted in the detail pane. This must be
+ * long enough for the highlight animation (pulses + tint fade-out) to fully finish and return to
+ * transparent before the key is cleared, otherwise the highlight is cut off mid-animation.
+ */
+private const val HIGHLIGHT_DURATION_MS = 3600L
 
 /**
  * How long a pane transition keeps the search field out of the focus tree, so the focus

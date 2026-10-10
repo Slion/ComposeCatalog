@@ -18,8 +18,8 @@ package net.slions.compose.catalog
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -53,8 +53,8 @@ public val LocalHighlightedItemKey: ProvidableCompositionLocal<String?> =
  * A [Modifier] that highlights the preference row when its lazy list `key` matches
  * [LocalHighlightedItemKey]: the row is tinted with the theme's `primaryContainer` color
  * and flashed with a translucent [androidx.compose.material3.MaterialTheme.colorScheme.primary]
- * overlay a couple of times (a ripple-like cue), so it stands out while the list scrolls
- * to it.
+ * overlay that fades smoothly in and out several times (a gentle pulse), so it stands out
+ * while the list scrolls to it.
  *
  * Every lazy `*Item` extension applies this to its row, so a host can highlight a single
  * row (e.g. the entry a search navigated to) by providing [LocalHighlightedItemKey] with
@@ -68,23 +68,54 @@ public fun highlightedKeyModifier(key: String?): Modifier {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     // The static tint alone is easy to miss while the list is still scrolling, so the
-    // row also flashes (fades in and out) twice when the highlight starts.
+    // row also pulses with a smooth fade in and out when the highlight starts. Both the
+    // tint and the flash are driven by [Animatable]s and are guaranteed to reach fully
+    // transparent before the host clears the highlight, so the highlight always lifts
+    // smoothly instead of being cut off mid-animation.
+    val tint = remember { Animatable(1f) }
     val flash = remember { Animatable(0f) }
+    val tintColor = MaterialTheme.colorScheme.primaryContainer
     val flashColor = MaterialTheme.colorScheme.primary
+    // How many times the row pulses (fades in and then out) while it is highlighted.
+    val pulseCount = 2
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
         keyboardController?.hide()
-        repeat(2) {
-            flash.animateTo(0.35f, tween(180, easing = FastOutSlowInEasing))
-            flash.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
-        }
+        // One pulse is a full breath: a continuous fade in and then a fade out back to
+        // fully transparent. The alpha follows a raised cosine (a raised full sine) so it
+        // eases up from rest to a low peak and eases back down to rest with no hard snap
+        // at either end. The curve is sampled into keyframes (linear fill) so it plays as
+        // one slow, smooth breath rather than two separate tweens. The peak is kept low
+        // on purpose: the flash is a subtle glow that tints the row, not a wash that covers
+        // the row's content. The pulse repeats [pulseCount] times so the row keeps
+        // standing out while the list scrolls to it.
+        val pulse =
+            keyframes {
+                durationMillis = 1400
+                0f at 0
+                0.037f at 175
+                0.125f at 350
+                0.213f at 525
+                0.25f at 700
+                0.213f at 875
+                0.125f at 1050
+                0.037f at 1225
+                0f at 1400
+            }
+        repeat(pulseCount) { flash.animateTo(targetValue = 0f, animationSpec = pulse) }
+        // After the last pulse, ease the row's tint out to fully transparent so the
+        // highlight fades away rather than popping the moment the host clears the key.
+        tint.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
     }
     return Modifier
         .focusable()
         .focusRequester(focusRequester)
-        .background(MaterialTheme.colorScheme.primaryContainer)
         .drawWithContent {
+            // The tint is a *background* for the row: draw it first so the row's own
+            // content (text, icon, widget) stays visible on top of it.
+            if (tint.value > 0f) drawRect(color = tintColor.copy(alpha = tint.value))
             drawContent()
+            // The flash is a subtle glow drawn over the content as a brief pulse.
             if (flash.value > 0f) drawRect(color = flashColor.copy(alpha = flash.value))
         }
 }
