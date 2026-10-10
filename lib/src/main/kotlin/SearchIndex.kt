@@ -70,11 +70,10 @@ internal object SearchIndexer {
      */
     fun recordSubPage(
         page: Page,
-        onClick: (() -> Unit)?,
         key: String? = null,
         icon: @Composable (() -> Unit)? = null,
     ): SubPageRef? {
-        return collector?.recordSubPage(page, onClick, key, icon)
+        return collector?.recordSubPage(page, key, icon)
     }
 
     /**
@@ -86,15 +85,12 @@ internal object SearchIndexer {
 
 /**
  * A child-page reference registered by a page row ([item] with a [Page]): the child page,
- * an optional action
- * that replaces navigation when the row is tapped (e.g. launching an activity that
- * hosts the page in its own Catalog), the index of the row in the owning page's lazy
- * list, and the key of the lazy list item that hosts the row (so a search result can
- * highlight it; null when the row cannot be highlighted).
+ * the index of the row in the owning page's lazy list, and the key of the lazy list item
+ * that hosts the row (so a search result can highlight it; null when the row cannot be
+ * highlighted).
  */
 public data class SubPageRef(
     public val page: Page,
-    public val onClick: (() -> Unit)? = null,
     public val index: Int = 0,
     public val key: String? = null,
     /**
@@ -294,12 +290,10 @@ internal class SearchIndexRecorder {
 
     internal fun recordSubPage(
         page: Page,
-        onClick: (() -> Unit)?,
         key: String? = null,
         icon: @Composable (() -> Unit)? = null,
     ): SubPageRef {
-        val ref =
-            SubPageRef(page = page, onClick = onClick, index = count, key = key, icon = icon)
+        val ref = SubPageRef(page = page, index = count, key = key, icon = icon)
         subPages.add(ref)
         return ref
     }

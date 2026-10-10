@@ -130,9 +130,9 @@ public class CatalogOptions(
  *
  * @param title Title of the screen, shown in the top bar.
  * @param root The root page: its items are the list pane's top level, and its page rows
- *   ([item] with a [Page]) are the first-level pages. A page whose row carries an
- *   [item] action is an action row, not a viewable page: the two-pane auto-open skips
- *   it.
+ *   ([item] with a [Page]) are the first-level pages. A page row whose click is taken
+ *   by an action is a two-target row: the content runs the action, the trailing chevron
+ *   opens the page.
  * @param modifier Modifier applied to the root surface.
  * @param onBack Called when the host should dismiss the screen (i.e. system back while
  * the list pane is on screen in a single-pane layout, or a tap of the title-bar back
@@ -295,12 +295,10 @@ public fun Catalog(
             navigator.currentDestination?.pane == ListDetailPaneScaffoldRole.Detail
         when {
             isTwoPane && !onDetail -> {
-                // A sub-page row with its own onClick is an action row, not a viewable
-                // page: the auto-open filler skips it so the detail does not show its
-                // content.
+                // The auto-open filler: the first sub-page of the root (a two-target row
+                // still opens its page).
                 val id =
                     navigator.currentDestination?.contentKey
-                        ?: root.structure.subPages.firstOrNull { it.onClick == null }?.page?.id
                         ?: root.structure.subPages.firstOrNull()?.page?.id
                 if (id != null) {
                     pagePath = pathOf(id)
@@ -381,17 +379,6 @@ public fun Catalog(
             buildPageStructure(root)
         }
     val index = remember(structures) { structures.mapValues { it.value.entries } }
-    // Pages whose row carries an action (e.g. launching an activity that hosts the page
-    // in its own Catalog) instead of a navigable detail. They are not viewable pages, so
-    // a search result for one navigates to its row (scroll and highlight) rather than
-    // opening it; tapping the row itself still runs the action.
-    val actionPageIds =
-        remember(structures) {
-            structures.values
-                .flatMap { it.subPages }
-                .filter { it.onClick != null }
-                .mapTo(HashSet()) { it.page.id }
-        }
     val matches =
         remember(root, index, query) { searchPages(root, index, query) }
     val searchEntries =
@@ -442,7 +429,6 @@ public fun Catalog(
                 val ownerIndex = currentPath.indexOfFirst { it.id == owner.id }
                 val childId =
                     (if (ownerIndex >= 0) currentPath.getOrNull(ownerIndex + 1)?.id else null)
-                        ?: owner.structure.subPages.firstOrNull { it.onClick == null }?.page?.id
                         ?: owner.structure.subPages.firstOrNull()?.page?.id
                 childId?.let { navigateToPath(trail + listOf(it)) }
             }
@@ -481,9 +467,6 @@ public fun Catalog(
         keyboardController?.hide()
         val page = entry.page
         when {
-            // An action page: not a viewable page, so whatever matched, navigate to its
-            // row (scroll and highlight) instead of running the action.
-            actionPageIds.contains(page.id) -> showSubPageRow(page, entry.trail)
             // An entry of the page the list pane shows: scroll the list to the row.
             entry.entry != null && page.id == parentPage.id ->
                 showListEntry(entry.entry, page, pagePath.dropLast(1))

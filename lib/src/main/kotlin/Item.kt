@@ -17,6 +17,7 @@
 package net.slions.compose.toolkit
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,14 +25,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.CardElevation
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
@@ -53,9 +57,8 @@ import androidx.compose.ui.unit.dp
  * any other row (a host may give it a [CardStyle] or put it in a [group] like any other
  * item). It
  * only defaults its action: tapping a page row navigates into [page], unless [onClick]
- * is set, in which case the action runs instead (e.g. launching an activity that hosts
- * the page in its own Catalog), and the trailing action icon indicates which — a chevron
- * for navigation, an open-in-new for an action, or a custom [actionIcon].
+ * is set, in which case the row content runs the action and the trailing chevron,
+ * behind a separator, becomes the page's own tap target (a two-target row).
  *
  * @param key The lazy list key of the row, and the preference state key. If null,
  *   [page]'s id is used (page rows are keyed by their page's id).
@@ -65,15 +68,16 @@ import androidx.compose.ui.unit.dp
  * @param modifier Modifier applied to the row.
  * @param enabled Whether the row is enabled.
  * @param icon The leading icon. If null, [page]'s icon is used.
- * @param actionIcon The action icon, shown just before the widget. For a page row,
- *   a chevron for navigation and an open-in-new icon for an action if null.
+ * @param actionIcon The action icon, shown just before the widget. For a page row, a
+ *   chevron if null.
  * @param summary The summary text, shown below the title. If null, [page]'s summary is
  *   used.
  * @param staticSummary A static summary used in the [buildSearchIndex] index. If null,
  *   [summary] is used.
  * @param widgetContainer The trailing widget (e.g. a switch or checkbox).
  * @param onClick Click handler; for a page row, when null the row navigates into [page];
- *   when set, it replaces the navigation.
+ *   when set, the row content runs it and the trailing chevron (behind a separator)
+ *   opens [page].
  * @param style When non-null, the row is drawn in its own card of this style (a card is a
  *   style, not a container); [CardStyle.None] is equivalent to null — the row is drawn
  *   without a card.
@@ -114,7 +118,7 @@ public fun LazyListScope.item(
         // A page row: registers the page reference (for the tree walk and navigation).
         // No search entry: the child page is searchable as a page of the tree in its
         // own right, and a row entry would only duplicate it.
-        page != null -> SearchIndexer.recordSubPage(page, onClick, rowKey, icon ?: page?.icon)
+        page != null -> SearchIndexer.recordSubPage(page, rowKey, icon ?: page?.icon)
         // A preference row: searchable entry, keyed.
         rowKey != null ->
             SearchIndexer.record(
@@ -179,8 +183,8 @@ internal val LocalOnSelectPage: ProvidableCompositionLocal<(String) -> Unit> =
  * One row: a preference row, or — with [page] — a page row that opens the page. A page
  * row is rendered exactly like any other row (styled like any other: a host may give it a
  * [CardStyle] or put it in a [group] like any other item); it only defaults its action — the
- * trailing action icon (a chevron for navigation, an open-in-new for an action) and the
- * click (navigate into [page] unless [onClick] is set).
+ * trailing chevron and the click (navigate into [page] unless [onClick] is set, in which
+ * case the chevron, behind a separator, is the page's own tap target).
  */
 @Composable
 public fun Item(
@@ -196,21 +200,23 @@ public fun Item(
 ) {
     // Read in the composable scope: the click lambda is not.
     val navigate = LocalOnSelectPage.current
-    // A page row's default action icon: a chevron for navigation, an open-in-new for
-    // the action that replaces the navigation.
+    // A page row whose click is taken by an action: the trailing action icon (the
+    // chevron by default) becomes the page's own tap target (a two-target row), drawn
+    // behind a separator in the widget slot, as in [ItemActionIconButton].
+    val iconNavigates = page != null && onClick != null
+    val chevron =
+        @Composable {
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = null,
+            )
+        }
+    val twoTargetIcon: @Composable (() -> Unit)? =
+        if (iconNavigates) actionIcon ?: chevron else null
+    // A page row's default action icon: the navigation chevron.
     val effectiveActionIcon =
-        if (page != null && actionIcon == null) {
-            @Composable {
-                Icon(
-                    imageVector =
-                        if (onClick == null) {
-                            Icons.Filled.ChevronRight
-                        } else {
-                            Icons.AutoMirrored.Filled.OpenInNew
-                        },
-                    contentDescription = null,
-                )
-            }
+        if (twoTargetIcon == null && page != null && actionIcon == null) {
+            chevron
         } else {
             actionIcon
         }
@@ -305,7 +311,44 @@ public fun Item(
                 }
             }
         },
-        widgetContainer = { widgetContainer?.invoke() },
+        widgetContainer = {
+            if (twoTargetIcon != null) {
+                val theme = LocalPreferenceTheme.current
+                Row(
+                    modifier = Modifier.padding(start = theme.horizontalSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.size(DividerDefaults.Thickness, theme.dividerHeight)
+                                .background(
+                                    DividerDefaults.color.let {
+                                        if (enabled) it else it.copy(alpha = theme.disabledOpacity)
+                                    }
+                                ),
+                    )
+                    // The row's click runs the action, so the icon is the page's own
+                    // entry point: a tap target of its own, behind a separator (as in
+                    // [ItemActionIconButton]). Equal padding on both sides of the 48 dp
+                    // button (whose 12 dp inner padding centers the icon) leaves the
+                    // icon centered between the separator and the row's end.
+                    IconButton(
+                        onClick = { page?.id?.let(navigate) },
+                        modifier = Modifier.padding(horizontal = theme.horizontalSpacing),
+                        enabled = enabled,
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                contentColor = theme.iconColor,
+                                disabledContentColor =
+                                    theme.iconColor.copy(alpha = theme.disabledOpacity),
+                            ),
+                        content = twoTargetIcon,
+                    )
+                }
+            } else {
+                widgetContainer?.invoke()
+            }
+        },
         onClick = effectiveOnClick,
     )
 }

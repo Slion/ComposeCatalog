@@ -132,14 +132,16 @@ public data class GroupItem(
     public val page: Page? = null,
     /** The leading icon of a data row. If null, [page]'s icon is used. */
     public val icon: @Composable (() -> Unit)? = null,
+    /** The trailing action icon of a data row. If null, [page]'s default is used (for a
+     * page row, the navigation chevron). */
+    public val actionIcon: @Composable (() -> Unit)? = null,
     /** The trailing widget of a data row (e.g. a switch or checkbox). */
     public val widgetContainer: @Composable (() -> Unit)? = null,
     /** Whether a data row is enabled. */
     public val enabled: Boolean = true,
     /**
      * The click action of a data row; for a page row, when null the row navigates into
-     * [page], and it is also recorded on the child-page reference so the Catalog can apply
-     * it (auto-open filler, search results).
+     * [page], and when set the trailing chevron becomes the page's own tap target.
      */
     public val onClick: (() -> Unit)? = null,
     /**
@@ -175,6 +177,7 @@ public class GroupScope {
      * @param title Title of the row. If null, [page]'s title is used.
      * @param summary Summary of the row. If null, [page]'s summary is used.
      * @param icon Icon to draw next to the text. If null, [page]'s icon is used.
+     * @param actionIcon The trailing action icon. If null, [page]'s default is used.
      * @param widgetContainer Container to draw at the end of the preference row.
      * @param enabled Whether the row is enabled.
      * @param onClick Callback invoked when the row is clicked; for a page row, when null the
@@ -187,6 +190,7 @@ public class GroupScope {
         title: String? = null,
         summary: String? = null,
         icon: @Composable (() -> Unit)? = null,
+        actionIcon: @Composable (() -> Unit)? = null,
         widgetContainer: @Composable (() -> Unit)? = null,
         enabled: Boolean = true,
         onClick: (() -> Unit)? = null,
@@ -198,6 +202,7 @@ public class GroupScope {
                 summary = summary ?: page?.summary,
                 page = page,
                 icon = icon ?: page?.icon,
+                actionIcon = actionIcon,
                 widgetContainer = widgetContainer,
                 enabled = enabled,
                 onClick = onClick,
@@ -292,6 +297,7 @@ internal fun GroupCard(
                 page = item.page,
                 summary = item.summary,
                 icon = item.icon,
+                actionIcon = item.actionIcon,
                 widgetContainer = item.widgetContainer,
                 enabled = item.enabled,
                 onClick = item.onClick,
@@ -366,7 +372,7 @@ public fun LazyListScope.group(
             // replaces navigation, if any); no search entry, as the page itself is
             // searchable in its own right.
             item.page != null ->
-                SearchIndexer.recordSubPage(item.page, item.onClick, rowKey, item.icon ?: item.page?.icon)
+                SearchIndexer.recordSubPage(item.page, rowKey, item.icon ?: item.page?.icon)
             // A preference card: searchable entry, keyed.
             else -> SearchIndexer.record(rowKey, item.title, item.summary, item.icon)
         }
