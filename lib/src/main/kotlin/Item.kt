@@ -72,7 +72,8 @@ import androidx.compose.ui.unit.dp
  * @param onClick Click handler; for a page row, when null the row navigates into [page];
  *   when set, it replaces the navigation.
  * @param style When non-null, the row is drawn in its own card of this style (a card is a
- *   style, not a container); when null, the row is drawn without a card.
+ *   style, not a container); [CardStyle.None] is equivalent to null — the row is drawn
+ *   without a card.
  * @param cardColor Card background color. Only applies with [style]; if null, the default
  * container color of [style] is used.
  * @param cardElevation Card elevation. Only applies to [CardStyle.Elevated]; if null,
@@ -128,7 +129,7 @@ public fun LazyListScope.item(
                 onClick = onClick,
             )
         }
-        if (style != null) {
+        if (style != null && style != CardStyle.None) {
             // A carded row: the card is a style of the row, with the group's outer clearance.
             val outer = outerPadding ?: PaddingValues(LocalPreferenceTheme.current.horizontalSpacing)
             Column(

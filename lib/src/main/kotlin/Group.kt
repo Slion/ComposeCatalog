@@ -55,6 +55,10 @@ public sealed class CardStyle {
     /** An outlined card (Material Design 3 [OutlinedCard]) with
      * [CardDefaults.outlinedCardColors]. */
     public object Outlined : CardStyle()
+
+    /** No card at all: the rows are drawn plainly (a group keeps its spacing and outer
+     * clearance, and [item] keeps its standard row). */
+    public object None : CardStyle()
 }
 
 /**
@@ -111,6 +115,8 @@ internal fun CardSurface(
         ) {
             content()
         }
+
+        CardStyle.None -> error("CardSurface is not used with CardStyle.None")
     }
 }
 
@@ -204,7 +210,8 @@ public class GroupScope {
  * Renders a group of items, each drawn in its own Material Design 3 card of [style],
  * separated by [itemSpacing]. The first item shows rounded top corners, the last item shows
  * rounded bottom corners, and middle items have square corners, giving the impression of a
- * single card split into individual rows.
+ * single card split into individual rows. With [CardStyle.None], the items are drawn
+ * plainly, without a card.
  *
  * @param style Style of the individual cards.
  * @param modifier Modifier used to draw the group.
@@ -226,18 +233,37 @@ public fun Group(
     outerPadding: PaddingValues? = null,
     items: List<GroupItem>,
 ) {
-    val cardShape = shape ?: MaterialTheme.shapes.medium
-    val cornerSize =
-        (cardShape as? RoundedCornerShape ?: RoundedCornerShape(12.dp)).topStart
-    val zero = CornerSize(0f)
     val outer = outerPadding ?: PaddingValues(LocalPreferenceTheme.current.horizontalSpacing)
-    val last = items.size - 1
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(outer),
         verticalArrangement = Arrangement.spacedBy(itemSpacing),
     ) {
+        if (style == CardStyle.None) {
+            items.forEach { item ->
+                if (item.content != null) {
+                    item.content()
+                } else {
+                    Item(
+                        title = item.title,
+                        modifier = Modifier.fillMaxWidth(),
+                        page = item.page,
+                        summary = item.summary,
+                        icon = item.icon,
+                        widgetContainer = item.widgetContainer,
+                        enabled = item.enabled,
+                        onClick = item.onClick,
+                    )
+                }
+            }
+            return
+        }
+        val cardShape = shape ?: MaterialTheme.shapes.medium
+        val cornerSize =
+            (cardShape as? RoundedCornerShape ?: RoundedCornerShape(12.dp)).topStart
+        val zero = CornerSize(0f)
+        val last = items.size - 1
         items.forEachIndexed { index, item ->
             val itemShape =
                 when {

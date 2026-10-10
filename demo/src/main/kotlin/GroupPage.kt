@@ -110,14 +110,30 @@ fun groupPage(colorScheme: ColorScheme): Page =
             item(page = listPage())
         }
 
-        section(key = "gp_styles_category", title = "Styles")
+        section(key = "category_filled", title = "Filled")
+        group(key = "gp_filled", style = CardStyle.Filled) {
+            item(title = "Filled, first", summary = "CardStyle.Filled")
+            item(title = "Filled, last", summary = "Filled surface.")
+        }
+        
+        section(key = "category_elevated", title = "Elevated")
         group(key = "gp_elevated", style = CardStyle.Elevated) {
             item(title = "Elevated, first", summary = "CardStyle.Elevated.")
             item(title = "Elevated, last", summary = "A shadow instead of a filled surface.")
         }
+        
+        section(key = "category_outline", title = "Outlined")
         group(key = "gp_outlined", style = CardStyle.Outlined) {
             item(title = "Outlined, first", summary = "CardStyle.Outlined.")
             item(title = "Outlined, last", summary = "A border instead of a surface.")
+        }
+        
+        section(key = "category_nocard", title = "No card")
+        // No card at all: the group keeps its spacing and outer clearance, but the rows are
+        // drawn plainly.
+        group(key = "gp_none", style = CardStyle.None) {
+            item(title = "No card, first", summary = "CardStyle.None: plain rows.")
+            item(title = "No card, last", summary = "Same group, no card.")
         }
 
         section(key = "gp_custom_category", title = "Customization")
