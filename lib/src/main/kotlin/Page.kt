@@ -55,7 +55,10 @@ public data class Page(
      */
     internal val structure: PageStructure by lazy { walkPageContent(this) }
 
-    /** The child pages referenced by [content] via [item] (with a [Page]), in content order. */
+    /**
+     * The child pages referenced by [content] via a page row ([item] with a [Page], or a
+     * card/cardGroup row with a [Page]), in content order.
+     */
     internal val childPages: List<Page>
         get() = structure.subPages.map { it.page }
 }

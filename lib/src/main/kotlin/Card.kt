@@ -98,12 +98,21 @@ public fun LazyListScope.card(
     val cardIndex = SearchIndexer.itemCount()
     val fixes =
         scope.rows.mapIndexedNotNull { index, row ->
-            SearchIndexer.record(
-                    key = key ?: "card:${cardIndex}:row:$index",
-                    title = row.title,
-                    summary = row.summary,
-                )
-                ?.let { it to cardIndex }
+            when {
+                // A page row: registers the child-page reference; no search entry, as the
+                // page itself is searchable in its own right.
+                row.page != null -> {
+                    SearchIndexer.recordSubPage(row.page, row.onClick)
+                    null
+                }
+                else ->
+                    SearchIndexer.record(
+                            key = key ?: "card:${cardIndex}:row:$index",
+                            title = row.title,
+                            summary = row.summary,
+                        )
+                        ?.let { it to cardIndex }
+            }
         }
     SearchIndexer.setIndices(fixes.toMap())
     item(key) {
@@ -150,10 +159,12 @@ public fun LazyListScope.card(
     }
 }
 
-/** A single row of a [card], as built with [CardScope.preference]. */
+/** A single row of a [card], as built with [CardScope.item]. */
 public data class CardRow(
     public val title: String,
     public val summary: String?,
+    /** The page the row opens; when null, the row is a regular preference row. */
+    public val page: Page? = null,
     public val icon: @Composable (() -> Unit)? = null,
     public val widgetContainer: @Composable (() -> Unit)? = null,
     public val enabled: Boolean = true,
@@ -168,17 +179,21 @@ public class CardScope {
     internal val rows = mutableListOf<CardRow>()
 
     /**
-     * Adds a preference row to the card.
+     * Adds a row to the card: a preference row, or — with [page] — a row that opens a page,
+     * like [item] in a page's content.
      *
-     * @param title Title of the preference.
-     * @param summary Summary of the preference.
-     * @param icon Icon to draw next to the text.
+     * @param page The page the row opens; when null, the row is a regular preference row.
+     * @param title Title of the row. If null, [page]'s title is used.
+     * @param summary Summary of the row. If null, [page]'s summary is used.
+     * @param icon Icon to draw next to the text. If null, [page]'s icon is used.
      * @param widgetContainer Container to draw at the end of the preference row.
      * @param enabled Whether the preference is enabled.
-     * @param onClick Callback invoked when the preference is clicked.
+     * @param onClick Callback invoked when the preference is clicked; for a page row, when
+     *   null the row navigates into [page].
      */
     public fun item(
-        title: String,
+        page: Page? = null,
+        title: String? = null,
         summary: String? = null,
         icon: @Composable (() -> Unit)? = null,
         widgetContainer: @Composable (() -> Unit)? = null,
@@ -187,9 +202,10 @@ public class CardScope {
     ) {
         rows.add(
             CardRow(
-                title = title,
-                summary = summary,
-                icon = icon,
+                title = title ?: page?.title ?: "",
+                summary = summary ?: page?.summary,
+                page = page,
+                icon = icon ?: page?.icon,
                 widgetContainer = widgetContainer,
                 enabled = enabled,
                 onClick = onClick,
@@ -215,11 +231,12 @@ private fun CardContent(
             Item(
                 title = row.title,
                 modifier = Modifier.fillMaxWidth(),
+                page = row.page,
                 summary = row.summary,
                 icon = row.icon,
                 widgetContainer = row.widgetContainer,
                 enabled = row.enabled,
-                onClick = { row.onClick?.invoke() },
+                onClick = row.onClick,
             )
         }
     }
@@ -231,6 +248,15 @@ public data class CardItem(
     public val title: String,
     /** Optional summary text of the item, used to index it. */
     public val summary: String?,
+    /** The page the item opens; when non-null the item registers the child-page reference
+     * (and is not indexed for search, as the page itself is searchable). */
+    public val page: Page? = null,
+    /**
+     * The action that replaces navigation for a page item (e.g. launching an activity); it is
+     * recorded on the child-page reference so the catalog can apply it (auto-open filler,
+     * search results).
+     */
+    public val onClick: (() -> Unit)? = null,
     /** The composable content drawn inside the item's [Card]. */
     public val content: @Composable () -> Unit,
 )
@@ -245,16 +271,29 @@ public class CardGroupScope {
     /**
      * Adds an item to the group. Each item is drawn in its own [Card].
      *
-     * [title] and [summary] describe the item's single row for search indexing (the card's
-     * content is composable and not walked by [buildSearchIndex], so the row's own text cannot
-     * be read automatically). Pass the same title/summary the row displays.
+     * With [page], the item is a page row, like [item] in a page's content: it registers the
+     * child-page reference (so the page joins the tree), is not indexed for search (the page
+     * itself is searchable in its own right), and [title]/[summary] default to the page's.
+     * Otherwise [title] and [summary] describe the item's single row for search indexing (the
+     * card's content is composable and not walked by [buildSearchIndex], so the row's own text
+     * cannot be read automatically). Pass the same title/summary the row displays.
      */
     public fun card(
-        title: String,
+        page: Page? = null,
+        title: String? = null,
         summary: String? = null,
+        onClick: (() -> Unit)? = null,
         content: @Composable () -> Unit,
     ) {
-        items.add(CardItem(title, summary, content))
+        items.add(
+            CardItem(
+                title = title ?: page?.title ?: "",
+                summary = summary ?: page?.summary,
+                page = page,
+                onClick = onClick,
+                content = content,
+            )
+        )
     }
 }
 
@@ -349,12 +388,22 @@ public fun LazyListScope.cardGroup(
     val groupIndex = SearchIndexer.itemCount()
     val fixes =
         scope.items.mapIndexedNotNull { index, card ->
-            SearchIndexer.record(
-                    key = groupKey,
-                    title = card.title,
-                    summary = card.summary,
-                )
-                ?.let { it to groupIndex }
+            when {
+                // A page card: registers the child-page reference (with the action that
+                // replaces navigation, if any); no search entry, as the page itself is
+                // searchable in its own right.
+                card.page != null -> {
+                    SearchIndexer.recordSubPage(card.page, card.onClick)
+                    null
+                }
+                else ->
+                    SearchIndexer.record(
+                            key = groupKey,
+                            title = card.title,
+                            summary = card.summary,
+                        )
+                        ?.let { it to groupIndex }
+            }
         }
     SearchIndexer.setIndices(fixes.toMap())
     item(key = groupKey, contentType = "CardGroup") {

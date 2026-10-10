@@ -16,6 +16,7 @@
 
 package net.slions.compose.catalog.demo
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -23,20 +24,42 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import net.slions.compose.catalog.CardGroupScope
+import net.slions.compose.catalog.Item
 import net.slions.compose.catalog.ItemFooter
 import net.slions.compose.catalog.ItemSwitch
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.cardGroup
-import net.slions.compose.catalog.item
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.section
 
 const val SampleTitle = "Compose Catalog"
 
 /**
+ * A page card: a page row drawn in its own card, exactly like any other card row (the page
+ * row's defaults provide the chevron and the navigation). With [onClick] the action
+ * replaces the navigation (the row's action icon becomes open-in-new) and is also recorded
+ * on the page reference.
+ */
+private fun CardGroupScope.pageCard(page: Page, onClick: (() -> Unit)? = null) {
+    card(page = page, onClick = onClick) {
+        Item(
+            title = page.title,
+            page = page,
+            icon = page.icon,
+            summary = page.summary,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onClick,
+        )
+    }
+}
+
+/**
  * The root page of the sample tree, shared by every sample host (the full-screen screen
- * and the bottom sheet): one page row per item type (each exercising the type's various
- * configurations), the root's own preferences below them, and two action rows at the end.
+ * and the bottom sheet): a card group with one page row per item type (each exercising the
+ * type's various configurations), the root's own preferences below them, and two action
+ * rows at the end.
  *
  * The action rows carry an [item] action that replaces navigation — their trailing action
  * icon is the open-in-new (not the page-row chevron) accordingly: the Settings row opens
@@ -62,60 +85,44 @@ fun sampleRootPage(
     val radioGroup1 = rememberSaveable { mutableStateOf("a") }
     val radioGroup3 = rememberSaveable { mutableStateOf("c") }
     return Page(id = "root", title = SampleTitle) {
-        item(page = itemPage(colorScheme, elevatedElevation))
-        item(page = checkboxPage())
-        item(page = switchPage())
-        item(page = sliderPage(sliderState))
-        item(page = listPage())
-        item(page = multiSelectListPage())
-        item(page = textFieldPage())
-        item(page = radioButtonPage(radioGroup1, radioGroup3))
-        item(page = footerPage())
-        item(page = itemActionsPage())
-        item(page = itemActionIconButtonPage())
-        item(page = itemActionsSwitchPage())
-        item(page = nestedPage())
-        section(key = "root_category", title = "Root page")
-        cardGroup(key = "root_group") {
-            card(
-                title = "Root switch",
-                summary = "On",
-            ) {
-                val state = rememberValue(key = "root_switch", defaultValue = true)
-                ItemSwitch(
-                    state = state,
-                    title = "Root switch",
-                    summary = { if (it) "On" else "Off" },
-                )
-            }
-            card(
-                title = "Root footer",
-                summary = "The root level hosts any preference, like a page.",
-            ) {
-                ItemFooter(summary = "The root level hosts any preference, like a page.")
-            }
+        section(key = "key_paged", title = "Pages")
+        cardGroup(key = "pages_group") {
+            pageCard(itemPage(colorScheme, elevatedElevation))
+            pageCard(checkboxPage())
+            pageCard(switchPage())
+            pageCard(sliderPage(sliderState))
+            pageCard(listPage())
+            pageCard(multiSelectListPage())
+            pageCard(textFieldPage())
+            pageCard(radioButtonPage(radioGroup1, radioGroup3))
+            pageCard(footerPage())
+            pageCard(itemActionsPage())
+            pageCard(itemActionIconButtonPage())
+            pageCard(itemActionsSwitchPage())
+            pageCard(nestedPage())
         }
-        item(
-            // An action page: its row carries an action, so it is never navigated to and
-            // its content stays empty.
-            page =
-                Page(
-                    id = "settings_activity",
-                    title = "Settings",
-                    summary = "A second catalog: its own tree and search, sharing this app's store.",
-                ) {
-                },
-            onClick = onOpenSettings,
-        )
-        item(
-            page =
-                Page(
-                    id = "sheet_settings",
-                    title = "Sheet settings",
-                    summary = "This settings tree inside a bottom sheet.",
-                ) {
-                },
-            onClick = onOpenSheet,
-        )
+        section(key = "section_others", title = "Others")
+        cardGroup(key = "actions_group") {
+            // Action pages: their rows carry an action, so they are never navigated to
+            // and their content stays empty.
+            pageCard(
+                page =
+                    Page(
+                        id = "settings_activity",
+                        title = "Settings",
+                        summary = "A second catalog: its own tree and search, sharing this app's store.",
+                    ) {},
+                onClick = onOpenSettings,
+            )
+            pageCard(
+                page =
+                    Page(
+                        id = "sheet_settings",
+                        title = "Bottom sheet",
+                        summary = "This settings tree inside a bottom sheet.",
+                    ) {},
+                onClick = onOpenSheet,
+            )
+        }
     }
 }
