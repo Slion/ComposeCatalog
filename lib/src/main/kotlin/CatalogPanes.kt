@@ -308,6 +308,7 @@ internal fun ListPane(
                     // in content order. Each sub-page row is its own lazy item — not one
                     // group item — so the pane can scroll to the selected row (e.g. after
                     // popping up the tree in two-pane, when the row set changes).
+                    GroupKeys.reset()
                     parentPage.content(this)
                 }
             }
@@ -579,6 +580,7 @@ internal fun DetailPane(
                 // The page's items: its sub-page rows and its regular items, in content
                 // order; tapping a sub-page row navigates deeper into the tree (the
                 // list pane switches to that page's items).
+                GroupKeys.reset()
                 page.content(this)
             }
             // The compact bar: declared after the list so it draws above the content.

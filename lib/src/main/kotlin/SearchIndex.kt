@@ -148,6 +148,7 @@ public data class SearchIndexEntry(
  */
 internal fun walkPageContent(page: Page): PageStructure =
     SearchIndexer.withCollector { recorder ->
+        GroupKeys.reset()
         page.content(SearchIndexScope(recorder))
         PageStructure(
             entries = recorder.entries.toList(),

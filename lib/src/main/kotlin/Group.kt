@@ -306,6 +306,24 @@ internal fun GroupCard(
 }
 
 /**
+ * The position of the group being registered in the current page content build.
+ *
+ * Reset at the start of every build (composition or search index walk), so that an auto base
+ * key is unique between the groups of a page, stable across recompositions, and identical
+ * across the two builds (a search entry's key must match the composed row's key to
+ * highlight it).
+ */
+internal object GroupKeys {
+    private var position = 0
+
+    internal fun next(): Int = position++
+
+    internal fun reset() {
+        position = 0
+    }
+}
+
+/**
  * Adds a group of items to the lazy list, each drawn in its own card of [style], with the
  * first showing rounded top corners and the last rounded bottom corners.
  *
@@ -339,7 +357,7 @@ public fun LazyListScope.group(
     val scope = GroupScope()
     scope.content()
     val items = scope.items
-    val baseKey = key ?: "group:${SearchIndexer.itemCount()}"
+    val baseKey = key ?: "group:${GroupKeys.next()}"
     val last = items.size - 1
     items.forEachIndexed { index, item ->
         val rowKey = "$baseKey:$index"
