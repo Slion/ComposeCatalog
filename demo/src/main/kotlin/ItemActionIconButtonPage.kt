@@ -24,8 +24,8 @@ import androidx.compose.runtime.Composable
 import net.slions.compose.catalog.Item
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.item
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemActionIconButton
 
@@ -90,11 +90,9 @@ fun itemActionIconButtonPage(): Page =
             onIconButtonClick = {},
         )
         section(key = "ttib_cards_category", title = "Cards")
-        card(key = "ttib_card") {
-            item(title = "Card icon button", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group icon button", summary = "A two-target row inside a card group.") {
+        item(key = "ttib_card", title = "Card icon button", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group icon button", summary = "A two-target row inside a card group.") {
                 net.slions.compose.catalog.ItemActionIconButton(
                     title = "Card group icon button",
                     summary = "A two-target row inside a card group.",
@@ -107,7 +105,7 @@ fun itemActionIconButtonPage(): Page =
                     onIconButtonClick = {},
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

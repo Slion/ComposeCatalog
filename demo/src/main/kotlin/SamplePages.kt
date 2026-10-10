@@ -16,7 +16,6 @@
 
 package net.slions.compose.catalog.demo
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -24,36 +23,14 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import net.slions.compose.catalog.CardGroupScope
-import net.slions.compose.catalog.Item
 import net.slions.compose.catalog.ItemFooter
 import net.slions.compose.catalog.ItemSwitch
 import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.group
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.section
 
 const val SampleTitle = "Compose Catalog"
-
-/**
- * A page card: a page row drawn in its own card, exactly like any other card row (the page
- * row's defaults provide the chevron and the navigation). With [onClick] the action
- * replaces the navigation (the row's action icon becomes open-in-new) and is also recorded
- * on the page reference.
- */
-private fun CardGroupScope.pageCard(page: Page, onClick: (() -> Unit)? = null) {
-    card(page = page, onClick = onClick) {
-        Item(
-            title = page.title,
-            page = page,
-            icon = page.icon,
-            summary = page.summary,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onClick,
-        )
-    }
-}
 
 /**
  * The root page of the sample tree, shared by every sample host (the full-screen screen
@@ -86,26 +63,29 @@ fun sampleRootPage(
     val radioGroup3 = rememberSaveable { mutableStateOf("c") }
     return Page(id = "root", title = SampleTitle) {
         section(key = "key_paged", title = "Pages")
-        cardGroup(key = "pages_group") {
-            pageCard(itemPage(colorScheme, elevatedElevation))
-            pageCard(checkboxPage())
-            pageCard(switchPage())
-            pageCard(sliderPage(sliderState))
-            pageCard(listPage())
-            pageCard(multiSelectListPage())
-            pageCard(textFieldPage())
-            pageCard(radioButtonPage(radioGroup1, radioGroup3))
-            pageCard(footerPage())
-            pageCard(itemActionsPage())
-            pageCard(itemActionIconButtonPage())
-            pageCard(itemActionsSwitchPage())
-            pageCard(nestedPage())
+        group(key = "pages_group") {
+            // A carded page row: no content, so the standard row is rendered from the page
+            // (title/summary/icon from the page, chevron and navigation by default).
+            item(page = itemPage(colorScheme, elevatedElevation))
+            item(page = groupPage(colorScheme))
+            item(page = checkboxPage())
+            item(page = switchPage())
+            item(page = sliderPage(sliderState))
+            item(page = listPage())
+            item(page = multiSelectListPage())
+            item(page = textFieldPage())
+            item(page = radioButtonPage(radioGroup1, radioGroup3))
+            item(page = footerPage())
+            item(page = itemActionsPage())
+            item(page = itemActionIconButtonPage())
+            item(page = itemActionsSwitchPage())
+            item(page = nestedPage())
         }
         section(key = "section_others", title = "Others")
-        cardGroup(key = "actions_group") {
+        group(key = "actions_group") {
             // Action pages: their rows carry an action, so they are never navigated to
-            // and their content stays empty.
-            pageCard(
+            // (the row shows open-in-new) and their content stays empty.
+            item(
                 page =
                     Page(
                         id = "settings_activity",
@@ -114,7 +94,7 @@ fun sampleRootPage(
                     ) {},
                 onClick = onOpenSettings,
             )
-            pageCard(
+            item(
                 page =
                     Page(
                         id = "sheet_settings",

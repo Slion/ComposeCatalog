@@ -25,8 +25,9 @@ import androidx.compose.ui.text.AnnotatedString
 import net.slions.compose.catalog.ItemMultiSelectList
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.itemMultiSelectList
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
@@ -101,11 +102,9 @@ fun multiSelectListPage(): Page =
             summary = "Alpha, Canary",
         )
         section(key = "msl_cards_category", title = "Cards")
-        card(key = "msl_card") {
-            item(title = "Card multi-select", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group multi-select", summary = "Alpha, Beta, Canary") {
+        item(key = "msl_card", title = "Card multi-select", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group multi-select", summary = "Alpha, Beta, Canary") {
                 val state = rememberValue("msl_group_state", setOf<String>("Alpha"))
                 val value by state
                 ItemMultiSelectList(
@@ -116,7 +115,7 @@ fun multiSelectListPage(): Page =
                     summary = value.sorted().joinToString(", ").ifEmpty { "None selected" },
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

@@ -57,7 +57,7 @@ public data class Page(
 
     /**
      * The child pages referenced by [content] via a page row ([item] with a [Page], or a
-     * card/cardGroup row with a [Page]), in content order.
+     * [group] item with a [Page]), in content order.
      */
     internal val childPages: List<Page>
         get() = structure.subPages.map { it.page }

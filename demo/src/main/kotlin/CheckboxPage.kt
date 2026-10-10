@@ -25,8 +25,9 @@ import androidx.compose.runtime.getValue
 import net.slions.compose.catalog.ItemCheckbox
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.itemCheckbox
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
@@ -108,11 +109,9 @@ fun checkboxPage(): Page =
             summary = "Not toggleable.",
         )
         section(key = "cb_cards_category", title = "Cards")
-        card(key = "cb_card") {
-            item(title = "Card checkbox", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group checkbox", summary = "A stateful row inside a card group.") {
+        item(key = "cb_card", title = "Card checkbox", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group checkbox", summary = "A stateful row inside a card group.") {
                 val state = rememberValue("cb_group_state", true)
                 val value by state
                 ItemCheckbox(
@@ -122,7 +121,7 @@ fun checkboxPage(): Page =
                     summary = "A stateful row inside a card group.",
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

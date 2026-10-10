@@ -23,8 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ItemActionsSwitch
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemActionsSwitch
@@ -98,11 +99,9 @@ fun itemActionsSwitchPage(): Page =
             summary = "The whole row is disabled.",
         )
         section(key = "tts_cards_category", title = "Cards")
-        card(key = "tts_card") {
-            item(title = "Card two-target switch", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group two-target switch", summary = "On/Off") {
+        item(key = "tts_card", title = "Card two-target switch", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group two-target switch", summary = "On/Off") {
                 val state = rememberValue("tts_group_state", false)
                 val value by state
                 ItemActionsSwitch(
@@ -113,7 +112,7 @@ fun itemActionsSwitchPage(): Page =
                     onClick = { },
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

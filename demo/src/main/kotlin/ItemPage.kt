@@ -34,8 +34,7 @@ import net.slions.compose.catalog.Item
 import net.slions.compose.catalog.CardStyle
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.item
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.group
 import net.slions.compose.catalog.section
 
 /**
@@ -105,19 +104,19 @@ fun itemPage(
             onClick = {},
         )
         section(key = "pref_cards_category", title = "Cards")
-        card(key = "pref_card") {
-            item(title = "Card row 1", summary = "First row of a real card.")
+        group(key = "pref_card") {
+            item(title = "Card row 1", summary = "First row of the group.")
             item(
                 title = "Card row 2",
                 icon = { Icon(imageVector = Icons.Filled.Favorite, contentDescription = null) },
             )
             item(title = "Card row 3", summary = "Last row.")
         }
-        cardGroup {
-            card(title = "Card group row 1", summary = "Each card group item is its own card.") {
+        group {
+            item(title = "Card group row 1", summary = "Each card group item is its own card.") {
                 Item(title = "Card group row 1", summary = "Each card group item is its own card.")
             }
-            card(title = "Card group row 2") {
+            item(title = "Card group row 2") {
                 Item(
                     title = "Card group row 2",
                     actionIcon = {
@@ -126,37 +125,36 @@ fun itemPage(
                 )
             }
         }
-        card(
+        item(
             key = "pref_card_custom",
+            title = "Custom color and shape",
+            summary = "primaryContainer, 24.dp corners.",
+            style = CardStyle.Filled,
             cardColor = colorScheme.primaryContainer,
             shape = RoundedCornerShape(24.dp),
-        ) {
-            item(title = "Custom color and shape", summary = "primaryContainer, 24.dp corners.")
-        }
-        card(
+        )
+        item(
             key = "pref_card_elevated",
+            title = "Elevated card",
+            summary = "Custom color and elevation.",
             style = CardStyle.Elevated,
             cardColor = colorScheme.secondaryContainer,
             cardElevation = elevatedElevation,
-        ) {
-            item(title = "Elevated card", summary = "Custom color and elevation.")
-        }
-        card(
+        )
+        item(
             key = "pref_card_outlined",
+            title = "Outlined card row",
+            summary = "Custom style, color, and shape.",
             style = CardStyle.Outlined,
             cardColor = colorScheme.surfaceVariant,
             shape = RoundedCornerShape(12.dp),
-            itemSpacing = 4.dp,
-        ) {
-            item(title = "Outlined card row", summary = "Custom style, color, and shape.")
-        }
-        card(
+        )
+        item(
             key = "pref_card_padding",
+            title = "Custom padding",
+            summary = "No outer padding.",
+            style = CardStyle.Filled,
             outerPadding = PaddingValues(0.dp),
-            contentPadding = PaddingValues(8.dp),
-            itemSpacing = 8.dp,
-        ) {
-            item(title = "Custom padding", summary = "No outer padding, 8.dp content and item spacing.")
-        }
+        )
     }
 }

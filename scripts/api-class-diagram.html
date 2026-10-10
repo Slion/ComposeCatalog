@@ -195,6 +195,8 @@ class PreferenceTheme {
 class Item {
   <<composable - item family>>
   +page: Page? (optional row that opens a page)
+  +style: CardStyle? (drawn in a card of this style)
+  +cardColor / cardElevation / cardBorder / shape / outerPadding
 }
 class BasicItem {
   <<composable>>
@@ -245,32 +247,30 @@ class AccentColorOption {
   <<data>>
 }
 
-%% ===== Card =====
+%% ===== Card style + group (a card is a style, group is layout) =====
 class CardStyle {
   <<sealed>>
   Filled
   Elevated
   Outlined
 }
-class CardItem {
+class GroupItem {
   <<data>>
   +title: String
   +summary: String?
   +page: Page?
   +content: Composable
+  +onClick: (() -> Unit)?
 }
-class CardRow {
-  <<data>>
-  +items: List~CardItem~
-}
-class CardGroup {
+class Group {
   <<composable>>
+  +style: CardStyle = Filled
+  +cardColor: Color?
+  +items: List~GroupItem~
 }
-class CardScope {
+class GroupScope {
   <<dsl scope>>
-}
-class CardGroupScope {
-  <<dsl scope>>
+  item()*
 }
 
 %% ===== External (material3-adaptive) =====
@@ -336,12 +336,13 @@ ItemActionsSwitch --|> Item : is a
 ItemFooter --|> Item : is a
 Section --|> Item : is a
 
-CardGroup ..> CardScope : dsl
-CardGroup ..> CardGroupScope : dsl
-CardGroup ..> CardStyle : style
-CardItem --> Page : page (optional)
-CardRow --> CardItem : items
-CardRow --|> Item : is a
+Group ..> GroupScope : dsl
+Group ..> CardStyle : style
+Group --> GroupItem : items
+GroupItem --> Page : page (optional)
+GroupItem ..> Item : rendered as
+Item ..> CardStyle : style (item style param)
+Page ..> Group : via a group item with a Page
 LiveItemSlider --|> Item : is a
 ColorItem --|> Item : is a
 ColorItem ..> AccentColorOption : options

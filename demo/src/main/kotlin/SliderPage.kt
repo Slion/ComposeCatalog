@@ -31,8 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ItemSlider
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemSlider
@@ -116,27 +117,27 @@ fun sliderPage(valueBasedState: MutableFloatState): Page {
             )
         }
         section(key = "slider_cards_category", title = "Cards")
-        card(key = "slider_card") {
-            item(
-                title = "Card slider",
-                summary = "A slider in a card row's widget slot.",
-                widgetContainer = {
-                    val state = rememberValue<Float>("slider_card_value", 0.5f)
-                    val value by state
-                    // The card row is full-width, but the slider must not take all of it: a
-                    // weightless Slider in the (non-weighted) widget slot would squeeze the
-                    // title, so pin a sensible width. The end padding gives the slider the
-                    // same clearance from the card edge the switch widget gets.
-                    androidx.compose.material3.Slider(
-                        value = value,
-                        onValueChange = { state.value = it },
-                        modifier = Modifier.width(180.dp).padding(end = 16.dp),
-                    )
-                },
-            )
-        }
-        cardGroup {
-            card(title = "Card group slider") {
+        item(
+            key = "slider_card",
+            title = "Card slider",
+            summary = "A slider in a card row's widget slot.",
+            widgetContainer = {
+                val state = rememberValue<Float>("slider_card_value", 0.5f)
+                val value by state
+                // The row is full-width, but the slider must not take all of it: a
+                // weightless Slider in the (non-weighted) widget slot would squeeze the
+                // title, so pin a sensible width. The end padding gives the slider the
+                // same clearance from the card edge the switch widget gets.
+                androidx.compose.material3.Slider(
+                    value = value,
+                    onValueChange = { state.value = it },
+                    modifier = Modifier.width(180.dp).padding(end = 16.dp),
+                )
+            },
+            style = CardStyle.Filled,
+        )
+        group {
+            item(title = "Card group slider") {
                 val state = rememberValue<Float>("slider_group_state", 2f)
                 val value by state
                 val sliderState = remember { mutableFloatStateOf(value) }
@@ -152,7 +153,7 @@ fun sliderPage(valueBasedState: MutableFloatState): Page {
                     valueText = { it.roundToInt().toString() },
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

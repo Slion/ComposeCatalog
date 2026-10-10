@@ -33,8 +33,8 @@ import androidx.compose.ui.unit.dp
 import net.slions.compose.catalog.Item
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.item
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemActions
 
@@ -111,14 +111,12 @@ fun itemActionsPage(): Page =
             },
         )
         section(key = "tt_cards_category", title = "Cards")
-        card(key = "tt_card") {
-            item(title = "Card two target", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group two target", summary = "A two-target row inside a card group.") {
+        item(key = "tt_card", title = "Card two target", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group two target", summary = "A two-target row inside a card group.") {
                 ItemActionsRowSample()
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

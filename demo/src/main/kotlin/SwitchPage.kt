@@ -23,8 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ItemSwitch
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemSwitch
@@ -93,11 +94,9 @@ fun switchPage(): Page =
             summary = "Not toggleable.",
         )
         section(key = "sw_cards_category", title = "Cards")
-        card(key = "sw_card") {
-            item(title = "Card switch", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group switch", summary = "A stateful row inside a card group.") {
+        item(key = "sw_card", title = "Card switch", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group switch", summary = "A stateful row inside a card group.") {
                 val state = rememberValue("sw_group_state", true)
                 val value by state
                 ItemSwitch(
@@ -107,7 +106,7 @@ fun switchPage(): Page =
                     summary = "A stateful row inside a card group.",
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

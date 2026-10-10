@@ -26,8 +26,9 @@ import net.slions.compose.catalog.ItemList
 import net.slions.compose.catalog.ItemListType
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.itemList
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 
@@ -111,14 +112,14 @@ fun listPage(): Page =
             summary = "Selected: Beta",
         )
         section(key = "list_cards_category", title = "Cards")
-        card(key = "list_card") {
-            item(
-                title = "Card list",
-                summary = "A static row inside a real card.",
-            )
-        }
-        cardGroup {
-            card(title = "Card group list", summary = "Alpha, Beta, Canary") {
+        item(
+            key = "list_card",
+            title = "Card list",
+            summary = "A static row drawn in a card.",
+            style = CardStyle.Filled,
+        )
+        group {
+            item(title = "Card group list", summary = "Alpha, Beta, Canary") {
                 val state = rememberValue("list_group_state", "Canary")
                 val value by state
                 ItemList(
@@ -129,7 +130,7 @@ fun listPage(): Page =
                     summary = "Selected: $value",
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

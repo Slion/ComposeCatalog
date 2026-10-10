@@ -16,8 +16,10 @@
 
 package net.slions.compose.catalog
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -25,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ProvideTextStyle
@@ -35,6 +38,8 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -42,7 +47,8 @@ import androidx.compose.ui.unit.dp
  * Adds a row to the lazy list: a preference row, or — with [page] — a row that opens a
  * page. A page row is the basic way a page references its children: it can be placed
  * anywhere in a page's content, next to any other item, and it is styled exactly like
- * any other row (a host may wrap it in a [card] / [cardGroup] like any other item). It
+ * any other row (a host may give it a [CardStyle] or put it in a [group] like any other
+ * item). It
  * only defaults its action: tapping a page row navigates into [page], unless [onClick]
  * is set, in which case the action runs instead (e.g. launching an activity that hosts
  * the page in its own catalog), and the trailing action icon indicates which — a chevron
@@ -65,6 +71,18 @@ import androidx.compose.ui.unit.dp
  * @param widgetContainer The trailing widget (e.g. a switch or checkbox).
  * @param onClick Click handler; for a page row, when null the row navigates into [page];
  *   when set, it replaces the navigation.
+ * @param style When non-null, the row is drawn in its own card of this style (a card is a
+ *   style, not a container); when null, the row is drawn without a card.
+ * @param cardColor Card background color. Only applies with [style]; if null, the default
+ * container color of [style] is used.
+ * @param cardElevation Card elevation. Only applies to [CardStyle.Elevated]; if null,
+ * [CardDefaults.elevatedCardElevation] is used.
+ * @param cardBorder Card border. Only applies to [CardStyle.Outlined]; if null,
+ * [CardDefaults.outlinedCardBorder] is used.
+ * @param shape Card shape. Only applies with [style]; if null, `MaterialTheme.shapes.medium`
+ * is used.
+ * @param outerPadding Clearance between the card and its container. Only applies with [style];
+ * if null, `PreferenceTheme.horizontalSpacing` is used on all sides.
  */
 public fun LazyListScope.item(
     key: String? = null,
@@ -78,6 +96,12 @@ public fun LazyListScope.item(
     staticSummary: String? = null,
     widgetContainer: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    style: CardStyle? = null,
+    cardColor: Color? = null,
+    cardElevation: CardElevation? = null,
+    cardBorder: BorderStroke? = null,
+    shape: Shape? = null,
+    outerPadding: PaddingValues? = null,
 ) {
     val rowKey = key ?: page?.id
     val rowTitle = title ?: page?.title
@@ -91,17 +115,42 @@ public fun LazyListScope.item(
         rowKey != null -> SearchIndexer.record(rowKey, rowTitle ?: "", staticSummary ?: rowSummary)
     }
     item(key = rowKey, contentType = if (page != null) "PageItem" else "Item") {
-        Item(
-            title = rowTitle ?: "",
-            page = page,
-            modifier = modifier.then(highlightedKeyModifier(rowKey)),
-            enabled = enabled,
-            icon = icon ?: page?.icon,
-            actionIcon = actionIcon,
-            summary = rowSummary,
-            widgetContainer = widgetContainer,
-            onClick = onClick,
-        )
+        val row: @Composable (Modifier) -> Unit = { m ->
+            Item(
+                title = rowTitle ?: "",
+                page = page,
+                modifier = m,
+                enabled = enabled,
+                icon = icon ?: page?.icon,
+                actionIcon = actionIcon,
+                summary = rowSummary,
+                widgetContainer = widgetContainer,
+                onClick = onClick,
+            )
+        }
+        if (style != null) {
+            // A carded row: the card is a style of the row, with the group's outer clearance.
+            val outer = outerPadding ?: PaddingValues(LocalPreferenceTheme.current.horizontalSpacing)
+            Column(
+                modifier =
+                    modifier
+                        .then(highlightedKeyModifier(rowKey))
+                        .fillMaxWidth()
+                        .padding(outer),
+            ) {
+                CardSurface(
+                    style = style,
+                    shape = shape,
+                    cardColor = cardColor,
+                    cardElevation = cardElevation,
+                    cardBorder = cardBorder,
+                ) {
+                    row(Modifier.fillMaxWidth())
+                }
+            }
+        } else {
+            row(modifier.then(highlightedKeyModifier(rowKey)))
+        }
     }
 }
 
@@ -118,8 +167,8 @@ internal val LocalOnSelectPage: ProvidableCompositionLocal<(String) -> Unit> =
 
 /**
  * One row: a preference row, or — with [page] — a page row that opens the page. A page
- * row is rendered exactly like any other row (styled like any other: a host may wrap it
- * in a [card] / [cardGroup] like any other item); it only defaults its action — the
+ * row is rendered exactly like any other row (styled like any other: a host may give it a
+ * [CardStyle] or put it in a [group] like any other item); it only defaults its action — the
  * trailing action icon (a chevron for navigation, an open-in-new for an action) and the
  * click (navigate into [page] unless [onClick] is set).
  */

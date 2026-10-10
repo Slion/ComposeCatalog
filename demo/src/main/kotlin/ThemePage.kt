@@ -28,7 +28,7 @@ import androidx.compose.ui.text.AnnotatedString
 import dev.vicart.compose.material.symbols.MaterialSymbol
 import net.slions.compose.catalog.ItemList
 import net.slions.compose.catalog.Page
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.group
 import net.slions.compose.catalog.section
 
 /**
@@ -50,8 +50,8 @@ fun themePage(
         icon = { MaterialSymbol.Outlined(icon = "palette") },
     ) {
         section(key = "theme_colors_category", title = "Colors")
-        cardGroup(key = "theme_colors_group") {
-            card(title = "Contrast", summary = values.themeMode.label) {
+        group(key = "theme_colors_group") {
+            item(title = "Contrast", summary = values.themeMode.label) {
                 ItemList(
                     value = values.themeMode,
                     onValueChange = { onValuesChange(values.copy(themeMode = it)) },
@@ -62,7 +62,7 @@ fun themePage(
                     valueToText = { AnnotatedString(it.label) },
                 )
             }
-            card(title = "Color", summary = accentNameOf(values.accent)) {
+            item(title = "Color", summary = accentNameOf(values.accent)) {
                 ColorPreference(
                     value = values.accent ?: "",
                     onValueChange = { onValuesChange(values.copy(accent = it.ifEmpty { null })) },
@@ -73,7 +73,7 @@ fun themePage(
                     defaultOptionColor = defaultAccent,
                 )
             }
-            card(title = "Tint") {
+            item(title = "Tint") {
                 LiveItemSlider(
                     title = "Tint",
                     value = (values.tintFactorPercent ?: DEFAULT_TINT_FACTOR_PERCENT).toFloat(),
@@ -90,8 +90,8 @@ fun themePage(
         }
 
         section(key = "theme_text_category", title = "Texts")
-        cardGroup(key = "theme_text_group") {
-            card(title = "Font", summary = fontLabel(values.fontFamily)) {
+        group(key = "theme_text_group") {
+            item(title = "Font", summary = fontLabel(values.fontFamily)) {
                 ItemList(
                     value = values.fontFamily ?: SampleThemeValues.DEFAULT_FONT,
                     onValueChange = { onValuesChange(values.copy(fontFamily = it)) },
@@ -102,7 +102,7 @@ fun themePage(
                     valueToText = { AnnotatedString(fontLabel(it)) },
                 )
             }
-            card(title = "Size") {
+            item(title = "Size") {
                 LiveItemSlider(
                     title = "Size",
                     value = (values.fontSizePercent ?: 100).toFloat(),
@@ -118,8 +118,8 @@ fun themePage(
         }
 
         section(key = "theme_shapes_category", title = "Shapes")
-        cardGroup(key = "theme_shapes_group") {
-            card(title = "Corner") {
+        group(key = "theme_shapes_group") {
+            item(title = "Corner") {
                 LiveItemSlider(
                     title = "Corner",
                     value = (values.cornerRadiusDp ?: DEFAULT_CORNER_RADIUS_DP).toFloat(),

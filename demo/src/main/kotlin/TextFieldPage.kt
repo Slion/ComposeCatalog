@@ -28,8 +28,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ItemTextField
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.rememberValue
 import net.slions.compose.catalog.itemTextField
@@ -115,11 +116,9 @@ fun textFieldPage(): Page =
             summary = "Value: Static",
         )
         section(key = "tf_cards_category", title = "Cards")
-        card(key = "tf_card") {
-            item(title = "Card text field", summary = "Static row inside a real card.")
-        }
-        cardGroup {
-            card(title = "Card group text field") {
+        item(key = "tf_card", title = "Card text field", summary = "Static row drawn in a card.", style = CardStyle.Filled)
+        group {
+            item(title = "Card group text field") {
                 val state = rememberValue("tf_group_state", "Group")
                 val value by state
                 ItemTextField(
@@ -130,7 +129,7 @@ fun textFieldPage(): Page =
                     summary = "Value: $value",
                 )
             }
-            card(title = "Card group row 2", summary = "Each card group item is its own card.") {
+            item(title = "Card group row 2", summary = "Each card group item is its own card.") {
                 net.slions.compose.catalog.Item(
                     title = "Card group row 2",
                     summary = "Each card group item is its own card.",

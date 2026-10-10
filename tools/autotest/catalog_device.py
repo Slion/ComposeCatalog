@@ -50,13 +50,13 @@ class CatalogDevice(AndroidDevice):
         success.
 
         The sheet is hosted in the same activity as the full-screen screen, so the
-        root "Sheet settings" action row opens it directly on one tap rather than
+        root "Bottom sheet" action row opens it directly on one tap rather than
         started as a separate activity.
         """
         import time
 
         self.open_main()
-        if not self.tap_title("Sheet settings"):
+        if not self.tap_title("Bottom sheet"):
             return False
         time.sleep(2.0)  # let the sheet expand and its content compose
         return True

@@ -23,8 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.ItemRadio
-import net.slions.compose.catalog.card
-import net.slions.compose.catalog.cardGroup
+import net.slions.compose.catalog.CardStyle
+import net.slions.compose.catalog.group
+import net.slions.compose.catalog.item
 import net.slions.compose.catalog.section
 import net.slions.compose.catalog.itemRadio
 import androidx.compose.runtime.MutableState
@@ -80,14 +81,14 @@ fun radioButtonPage(
             )
         }
         section(key = "radio_cards_category", title = "Cards")
-        card(key = "radio_card") {
-            item(
-                title = "Card radio group",
-                summary = "Radio rows rendered as card rows.",
-            )
-        }
-        cardGroup {
-            card(title = "Card group option 1", summary = "Selected option.") {
+        item(
+            key = "radio_card",
+            title = "Card radio group",
+            summary = "Radio rows rendered as card rows.",
+            style = CardStyle.Filled,
+        )
+        group {
+            item(title = "Card group option 1", summary = "Selected option.") {
                 ItemRadio(
                     selected = selected3 == "c",
                     title = "Card group option 1",
@@ -95,7 +96,7 @@ fun radioButtonPage(
                     onClick = { group3.value = "c" },
                 )
             }
-            card(title = "Card group option 2", summary = "Unselected option.") {
+            item(title = "Card group option 2", summary = "Unselected option.") {
                 ItemRadio(
                     selected = selected3 == "d",
                     title = "Card group option 2",
