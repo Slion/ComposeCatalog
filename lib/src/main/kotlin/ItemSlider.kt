@@ -278,11 +278,11 @@ public fun ItemSlider(
         enabled = enabled,
         iconContainer = {
             if (icon != null) {
-                Box(
+                Row(
                     modifier =
                         Modifier.widthIn(min = theme.iconContainerMinWidth)
                             .padding(theme.padding.copy(end = 0.dp)),
-                    contentAlignment = Alignment.CenterStart,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CompositionLocalProvider(
                         LocalContentColor provides
@@ -291,6 +291,7 @@ public fun ItemSlider(
                             },
                         content = icon,
                     )
+                    Spacer(modifier = Modifier.width(theme.horizontalSpacing))
                 }
             }
         },

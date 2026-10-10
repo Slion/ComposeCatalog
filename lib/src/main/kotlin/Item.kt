@@ -20,8 +20,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
@@ -263,11 +266,11 @@ public fun Item(
         iconContainer = {
             if (icon != null) {
                 val theme = LocalPreferenceTheme.current
-                Box(
+                Row(
                     modifier =
                         Modifier.widthIn(min = theme.iconContainerMinWidth)
                             .padding(theme.padding.copy(end = 0.dp)),
-                    contentAlignment = Alignment.CenterStart,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CompositionLocalProvider(
                         LocalContentColor provides
@@ -276,6 +279,10 @@ public fun Item(
                             },
                         content = icon,
                     )
+                    // A fixed gap to the text regardless of the icon's own size, so a
+                    // large icon (e.g. a game cover) is not flush against the title. The
+                    // row grows past [iconContainerMinWidth] to keep the spacing intact.
+                    Spacer(modifier = Modifier.width(theme.horizontalSpacing))
                 }
             }
         },
