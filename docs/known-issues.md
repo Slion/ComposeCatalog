@@ -27,6 +27,20 @@ short "resolved" note or delete it.
   selecting such a result scrolls to the card.
   *Open:* per-row targeting inside cards.
 
+- **Stale pane layout on a non-recreating resize.** material3-adaptive's
+  `ThreePaneScaffoldState` is a sealed class whose transition value only moves on
+  navigation operations or an explicit (suspend) snap — never from a directive change —
+  so a host that resizes without recreating its activity (rotation with
+  `configChanges="orientation|screenSize"`, or a fold spreading/folding in place) draws
+  the pre-resize layout (e.g. the two panes) in the new window size for a frame or two
+  before `Catalog`'s sync effect collapses it. The library cannot clamp the value
+  during composition (the state is sealed, the snap is suspend).
+  **Workaround (in place for the demo):** the demo activities declare no `configChanges`,
+  so a rotation recreates the activity and the fresh composition starts at the correct
+  partition count (all screen state is `rememberSaveable`, including the navigator's
+  destination history).
+  *Open:* hosts that must not recreate (foldables in place) still see the brief flash.
+
 ## Nested pages
 
 - **Breadcrumb is two-pane only.** The trail bar is shown only when both panes are visible; in

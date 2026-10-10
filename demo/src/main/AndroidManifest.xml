@@ -30,9 +30,12 @@
         android:theme="@style/Theme.Sample"
         tools:ignore="UnusedAttribute">
 
+        <!-- No configChanges: a rotation must recreate the activity. A non-recreating
+             resize leaves the pane scaffold holding its pre-resize value (material3
+             never syncs it with the directive), so the old layout — e.g. the two panes —
+             is drawn in the new window size for a frame or two before it collapses. -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="colorMode|density|fontScale|fontWeightAdjustment|grammaticalGender|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -43,7 +46,6 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:configChanges="colorMode|density|fontScale|fontWeightAdjustment|grammaticalGender|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
     </application>
