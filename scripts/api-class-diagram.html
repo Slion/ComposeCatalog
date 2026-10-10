@@ -231,9 +231,6 @@ class ItemActionIconButton {
 class ItemActionsSwitch {
   <<composable>>
 }
-class ItemFooter {
-  <<composable>>
-}
 class Section {
   <<composable - section header>>
 }
@@ -334,7 +331,6 @@ ItemMultiSelectList --|> Item : is a
 ItemActions --|> Item : is a
 ItemActionIconButton --|> Item : is a
 ItemActionsSwitch --|> Item : is a
-ItemFooter --|> Item : is a
 Section --|> Item : is a
 
 Group ..> GroupScope : dsl

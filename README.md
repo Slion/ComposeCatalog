@@ -99,7 +99,6 @@ Built-in item types include:
 - [`Item`](lib/src/main/kotlin/Item.kt)
 - [`Section`](lib/src/main/kotlin/Section.kt)
 - [`ItemCheckbox`](lib/src/main/kotlin/ItemCheckbox.kt)
-- [`ItemFooter`](lib/src/main/kotlin/ItemFooter.kt)
 - [`ItemList`](lib/src/main/kotlin/ItemList.kt) (supports both alert dialog and dropdown menu)
 - [`ItemMultiSelectList`](lib/src/main/kotlin/ItemMultiSelectList.kt)
 - [`ItemRadio`](lib/src/main/kotlin/ItemRadio.kt)

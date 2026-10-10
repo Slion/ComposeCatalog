@@ -23,7 +23,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import net.slions.compose.catalog.ItemFooter
 import net.slions.compose.catalog.ItemSwitch
 import net.slions.compose.catalog.Page
 import net.slions.compose.catalog.group
@@ -75,7 +74,6 @@ fun sampleRootPage(
             item(page = multiSelectListPage())
             item(page = textFieldPage())
             item(page = radioButtonPage(radioGroup1, radioGroup3))
-            item(page = footerPage())
             item(page = itemActionsPage())
             item(page = itemActionIconButtonPage())
             item(page = itemActionsSwitchPage())
