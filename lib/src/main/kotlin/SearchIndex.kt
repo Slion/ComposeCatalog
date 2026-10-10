@@ -43,12 +43,9 @@ internal object SearchIndexer {
     }
 
     /**
-     * Records a searchable entry for the preference row being registered. No-op when no index
-     * walk is in progress, so builders call it unconditionally.
-     *
-     * Returns the recorded [SearchIndexEntry], or null when no walk is in progress. Multi-row
-     * containers such as [card] use it to fix up the entries' [SearchIndexEntry.index]
-     * with the single index of their lazy list item.
+     * Records a searchable entry for the preference row being registered, with the index of
+     * the lazy list item it belongs to. No-op when no index walk is in progress, so builders
+     * call it unconditionally.
      */
     fun record(key: String, title: String, summary: String? = null): SearchIndexEntry? =
         collector?.record(key, title, summary)
@@ -58,22 +55,17 @@ internal object SearchIndexer {
      * (its row is registered with the fake scope immediately after). No-op when no walk is in
      * progress. Unlike [record], it does not add a search entry: the child page is
      * searchable as a page of the tree in its own right.
+     *
+     * @param key The key of the lazy list item that hosts the row, so a search result can
+     *   scroll to and highlight it.
      */
-    fun recordSubPage(page: Page, onClick: (() -> Unit)?) {
-        collector?.recordSubPage(page, onClick)
+    fun recordSubPage(page: Page, onClick: (() -> Unit)?, key: String? = null): SubPageRef? {
+        return collector?.recordSubPage(page, onClick, key)
     }
 
     /**
-     * Replaces the placeholder index of [entries] with the index of the lazy list item they
-     * belong to. No-op when no walk is in progress.
-     */
-    fun setIndices(indices: Map<SearchIndexEntry, Int>) {
-        collector?.setIndices(indices)
-    }
-
-    /**
-     * The number of lazy list items registered so far in the current walk, so that a multi-row
-     * container can know the index its (single) item will have. 0 when no walk is in progress.
+     * The number of lazy list items registered so far in the current walk, so a builder can
+     * know the index its item will have. 0 when no walk is in progress.
      */
     fun itemCount(): Int = collector?.count ?: 0
 }
@@ -82,13 +74,15 @@ internal object SearchIndexer {
  * A child-page reference registered by a page row ([item] with a [Page]): the child page,
  * an optional action
  * that replaces navigation when the row is tapped (e.g. launching an activity that
- * hosts the page in its own catalog), and the index of the row in the owning page's
- * lazy list.
+ * hosts the page in its own catalog), the index of the row in the owning page's lazy
+ * list, and the key of the lazy list item that hosts the row (so a search result can
+ * highlight it; null when the row cannot be highlighted).
  */
 public data class SubPageRef(
     public val page: Page,
     public val onClick: (() -> Unit)? = null,
     public val index: Int = 0,
+    public val key: String? = null,
 )
 
 /**
@@ -204,11 +198,7 @@ internal fun buildSearchEntries(
 /** Collects the [SearchIndexEntry]s of a page's preference tree, in registration order. */
 @PublishedApi
 internal class SearchIndexRecorder {
-    /**
-     * The entries, in registration order. Entries of a multi-row card (which is a single lazy
-     * list item) are added with a placeholder index and fixed up with [setIndices] once the
-     * card's item has been registered.
-     */
+    /** The entries, in registration order. */
     val entries: MutableList<SearchIndexEntry> = mutableListOf()
 
     /** The sub-page references, in registration (content) order. */
@@ -222,24 +212,16 @@ internal class SearchIndexRecorder {
         count++
     }
 
-    internal fun recordSubPage(page: Page, onClick: (() -> Unit)?) {
-        subPages.add(SubPageRef(page = page, onClick = onClick, index = count))
+    internal fun recordSubPage(page: Page, onClick: (() -> Unit)?, key: String? = null): SubPageRef {
+        val ref = SubPageRef(page = page, onClick = onClick, index = count, key = key)
+        subPages.add(ref)
+        return ref
     }
 
     fun record(key: String, title: String, summary: String? = null): SearchIndexEntry {
         val entry = SearchIndexEntry(key = key, title = title, summary = summary, index = count)
         entries.add(entry)
         return entry
-    }
-
-    /** Replaces the placeholder index of [entries] with the index of the item they belong to. */
-    internal fun setIndices(indices: Map<SearchIndexEntry, Int>) {
-        for ((entry, index) in indices) {
-            val i = this.entries.indexOfFirst { it === entry }
-            if (i != -1) {
-                this.entries[i] = entry.copy(index = index)
-            }
-        }
     }
 }
 

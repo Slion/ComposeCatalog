@@ -111,7 +111,7 @@ public fun LazyListScope.item(
         // A page row: registers the page reference (for the tree walk and navigation).
         // No search entry: the child page is searchable as a page of the tree in its
         // own right, and a row entry would only duplicate it.
-        page != null -> SearchIndexer.recordSubPage(page, onClick)
+        page != null -> SearchIndexer.recordSubPage(page, onClick, rowKey)
         // A preference row: searchable entry, keyed.
         rowKey != null -> SearchIndexer.record(rowKey, rowTitle ?: "", staticSummary ?: rowSummary)
     }

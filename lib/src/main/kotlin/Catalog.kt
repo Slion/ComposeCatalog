@@ -41,6 +41,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.window.core.layout.WindowSizeClass
@@ -170,6 +172,10 @@ public fun Catalog(
             isDestinationHistoryAware = true,
         )
     val scope = rememberCoroutineScope()
+    // Dismiss the search UI (field focus + software keyboard) when a search result is
+    // selected, so focus and the keyboard don't linger on the search field.
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // The search field is the first focusable in the list pane, so the focus system
     // restores focus to it on launch and when the list pane is restored, showing a brief
@@ -360,14 +366,15 @@ public fun Catalog(
         }
     val index = remember(structures) { structures.mapValues { it.value.entries } }
     // Pages whose row carries an action (e.g. launching an activity that hosts the page
-    // in its own catalog) instead of a navigable detail: tapping such a row — anywhere,
-    // including in the search results — runs the action.
-    val pageActions =
+    // in its own catalog) instead of a navigable detail. They are not viewable pages, so
+    // a search result for one navigates to its row (scroll and highlight) rather than
+    // opening it; tapping the row itself still runs the action.
+    val actionPageIds =
         remember(structures) {
             structures.values
                 .flatMap { it.subPages }
-                .mapNotNull { it.onClick?.let { action -> it.page.id to action } }
-                .toMap()
+                .filter { it.onClick != null }
+                .mapTo(HashSet()) { it.page.id }
         }
     val matches =
         remember(root, index, query) { searchPages(root, index, query) }
@@ -395,10 +402,9 @@ public fun Catalog(
             destination?.pane == ListDetailPaneScaffoldRole.Detail &&
             currentPage != null
 
-    // An entry of a page the list pane should show: make sure it shows that page's
-    // items, then scroll the list pane to the row and highlight it.
-    fun showListEntry(entry: SearchIndexEntry, owner: Page) {
-        query = ""
+    // Make the list pane show [owner]'s items, then scroll it to the row at [index] and
+    // highlight the lazy list item [key] (null: the row cannot be highlighted).
+    fun showListRow(owner: Page, key: String?, index: Int) {
         when {
             // The list pane already shows the owner's items.
             parentPage.id == owner.id -> Unit
@@ -414,17 +420,41 @@ public fun Catalog(
                 child?.let { navigateToPath(pathOf(it.id)) }
             }
         }
-        highlightedKey = entry.key
-        listScrollToIndex = 1 + entry.index
+        highlightedKey = key
+        listScrollToIndex = 1 + index
+    }
+
+    // An entry of a page the list pane should show: make sure it shows that page's
+    // items, then scroll the list pane to the row and highlight it.
+    fun showListEntry(entry: SearchIndexEntry, owner: Page) {
+        query = ""
+        showListRow(owner, entry.key, entry.index)
+    }
+
+    // A page row matched: it is not a viewable page (it carries an action), so show the
+    // page that owns the row in the list pane, then scroll to the row and highlight it.
+    fun showSubPageRow(page: Page) {
+        query = ""
+        val path = findPagePath(root, page.id) ?: return
+        val owner = path.getOrNull(path.size - 2) ?: return
+        val ref = owner.structure.subPages.firstOrNull { it.page.id == page.id } ?: return
+        showListRow(owner, ref.key, ref.index)
     }
 
     // A search result row was tapped.
     fun onSearchEntrySelected(entry: SearchEntry) {
         query = ""
+        // Clear the search field's focus and hide the keyboard up front: on Android the
+        // IME is tied to the window, not to Compose focus, so moving focus alone does not
+        // dismiss it. Doing this at the tap (synchronously) beats the row's own focus
+        // request, which otherwise races the scroll animation.
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
         val page = entry.page
         when {
-            // An action page: its row runs an action, whatever matched.
-            pageActions.containsKey(page.id) -> pageActions[page.id]!!.invoke()
+            // An action page: not a viewable page, so whatever matched, navigate to its
+            // row (scroll and highlight) instead of running the action.
+            actionPageIds.contains(page.id) -> showSubPageRow(page)
             // An entry of the page the list pane shows: scroll the list to the row.
             entry.entry != null && page.id == parentPage.id ->
                 showListEntry(entry.entry, page)
@@ -434,8 +464,9 @@ public fun Catalog(
             // The root page itself matched: its items are the list itself — nothing to
             // open.
             page.id == root.id -> Unit
-            // A page-level match: open the page.
-            entry.entry == null -> selectPageById(page.id)
+            // A page-level match: focus the page's row (scroll + highlight) rather than
+            // opening the page — search locates, it doesn't navigate.
+            entry.entry == null -> showSubPageRow(page)
             else -> {
                 selectPageById(page.id)
                 highlightedKey = entry.entry!!.key

@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -234,65 +235,73 @@ public fun Group(
     items: List<GroupItem>,
 ) {
     val outer = outerPadding ?: PaddingValues(LocalPreferenceTheme.current.horizontalSpacing)
+    val last = items.size - 1
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(outer),
         verticalArrangement = Arrangement.spacedBy(itemSpacing),
     ) {
-        if (style == CardStyle.None) {
-            items.forEach { item ->
-                if (item.content != null) {
-                    item.content()
-                } else {
-                    Item(
-                        title = item.title,
-                        modifier = Modifier.fillMaxWidth(),
-                        page = item.page,
-                        summary = item.summary,
-                        icon = item.icon,
-                        widgetContainer = item.widgetContainer,
-                        enabled = item.enabled,
-                        onClick = item.onClick,
-                    )
-                }
-            }
-            return
-        }
-        val cardShape = shape ?: MaterialTheme.shapes.medium
-        val cornerSize =
-            (cardShape as? RoundedCornerShape ?: RoundedCornerShape(12.dp)).topStart
-        val zero = CornerSize(0f)
-        val last = items.size - 1
         items.forEachIndexed { index, item ->
-            val itemShape =
-                when {
-                    last <= 0 -> cardShape
-                    index == 0 -> RoundedCornerShape(cornerSize, cornerSize, zero, zero)
-                    index == last -> RoundedCornerShape(zero, zero, cornerSize, cornerSize)
-                    else -> RoundedCornerShape(zero)
-                }
-            CardSurface(
+            GroupCard(
+                item = item,
                 style = style,
-                shape = itemShape,
+                shape = rowShape(shape, index, last),
                 cardColor = cardColor,
-            ) {
-                if (item.content != null) {
-                    item.content()
-                } else {
-                    Item(
-                        title = item.title,
-                        modifier = Modifier.fillMaxWidth(),
-                        page = item.page,
-                        summary = item.summary,
-                        icon = item.icon,
-                        widgetContainer = item.widgetContainer,
-                        enabled = item.enabled,
-                        onClick = item.onClick,
-                    )
-                }
-            }
+            )
         }
+    }
+}
+
+/**
+ * The shape of the card of the [index]-th row of a group of [last + 1] rows: rounded top
+ * corners on the first, rounded bottom corners on the last, and square corners in between.
+ */
+@Composable
+private fun rowShape(shape: Shape?, index: Int, last: Int): Shape {
+    val cardShape = shape ?: MaterialTheme.shapes.medium
+    val cornerSize =
+        (cardShape as? RoundedCornerShape ?: RoundedCornerShape(12.dp)).topStart
+    val zero = CornerSize(0f)
+    return when {
+        last <= 0 -> cardShape
+        index == 0 -> RoundedCornerShape(cornerSize, cornerSize, zero, zero)
+        index == last -> RoundedCornerShape(zero, zero, cornerSize, cornerSize)
+        else -> RoundedCornerShape(zero)
+    }
+}
+
+/**
+ * Draws a single group row: [item]'s content (or its standard row) in a card of [style] and
+ * [shape] — or plainly, without a card, when [style] is [CardStyle.None].
+ */
+@Composable
+internal fun GroupCard(
+    item: GroupItem,
+    style: CardStyle,
+    shape: Shape,
+    cardColor: Color?,
+) {
+    val content: @Composable () -> Unit = {
+        if (item.content != null) {
+            item.content()
+        } else {
+            Item(
+                title = item.title,
+                modifier = Modifier.fillMaxWidth(),
+                page = item.page,
+                summary = item.summary,
+                icon = item.icon,
+                widgetContainer = item.widgetContainer,
+                enabled = item.enabled,
+                onClick = item.onClick,
+            )
+        }
+    }
+    if (style == CardStyle.None) {
+        content()
+    } else {
+        CardSurface(style = style, shape = shape, cardColor = cardColor) { content() }
     }
 }
 
@@ -323,43 +332,53 @@ public fun LazyListScope.group(
     outerPadding: PaddingValues? = null,
     content: GroupScope.() -> Unit,
 ) {
-    // Runs the content (a plain data builder, not composable) before registering the item, so
-    // the group's items are recorded with the index of the group's single lazy list item. A
-    // stable key is always used (a generated one when the caller passes none) so a search
-    // result in the group can be highlighted.
+    // Runs the content (a plain data builder, not composable) before registering the rows, so
+    // each row is recorded with its own lazy list index — search can scroll to and highlight
+    // the specific row, not just the group. A stable base key (generated when the caller
+    // passes none) prefixes each row's key.
     val scope = GroupScope()
     scope.content()
-    val groupKey = key ?: "group:${SearchIndexer.itemCount()}"
-    val groupIndex = SearchIndexer.itemCount()
-    val fixes =
-        scope.items.mapIndexedNotNull { index, item ->
-            when {
-                // A page card: registers the child-page reference (with the action that
-                // replaces navigation, if any); no search entry, as the page itself is
-                // searchable in its own right.
-                item.page != null -> {
-                    SearchIndexer.recordSubPage(item.page, item.onClick)
-                    null
-                }
-                else ->
-                    SearchIndexer.record(
-                            key = groupKey,
-                            title = item.title,
-                            summary = item.summary,
-                        )
-                        ?.let { it to groupIndex }
+    val items = scope.items
+    val baseKey = key ?: "group:${SearchIndexer.itemCount()}"
+    val last = items.size - 1
+    items.forEachIndexed { index, item ->
+        val rowKey = "$baseKey:$index"
+        when {
+            // A page card: registers the child-page reference (with the action that
+            // replaces navigation, if any); no search entry, as the page itself is
+            // searchable in its own right.
+            item.page != null -> SearchIndexer.recordSubPage(item.page, item.onClick, rowKey)
+            // A preference card: searchable entry, keyed.
+            else -> SearchIndexer.record(rowKey, item.title, item.summary)
+        }
+        val isLast = index == last
+        item(key = rowKey, contentType = "GroupItem") {
+            // Read in the composable scope: the theme and layout direction are composition locals.
+            val outer = outerPadding ?: PaddingValues(LocalPreferenceTheme.current.horizontalSpacing)
+            val layoutDirection = LocalLayoutDirection.current
+            val rowPadding =
+                PaddingValues(
+                    start = outer.calculateLeftPadding(layoutDirection),
+                    top = if (index == 0) outer.calculateTopPadding() else 0.dp,
+                    end = outer.calculateRightPadding(layoutDirection),
+                    bottom =
+                        (if (isLast) outer.calculateBottomPadding() else 0.dp) +
+                            (if (!isLast) itemSpacing else 0.dp),
+                )
+            Column(
+                modifier =
+                    modifier
+                        .fillMaxWidth()
+                        .then(highlightedKeyModifier(rowKey))
+                        .padding(rowPadding),
+            ) {
+                GroupCard(
+                    item = item,
+                    style = style,
+                    shape = rowShape(shape, index, last),
+                    cardColor = cardColor,
+                )
             }
         }
-    SearchIndexer.setIndices(fixes.toMap())
-    item(key = groupKey, contentType = "Group") {
-        Group(
-            style = style,
-            modifier = modifier.then(highlightedKeyModifier(groupKey)),
-            itemSpacing = itemSpacing,
-            shape = shape,
-            cardColor = cardColor,
-            outerPadding = outerPadding,
-            items = scope.items,
-        )
     }
 }
