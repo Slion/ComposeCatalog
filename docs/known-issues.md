@@ -72,6 +72,21 @@ short "resolved" note or delete it.
   shared preference flow, and the device-UI test reaches it through the "Sheet settings" →
   "Open in a bottom sheet" row.
 
+## Search
+
+- **Result icon top-aligned on rows with a wrapped supporting line (won't fix).** A search
+  result whose supporting text wraps to several lines (e.g. a long page summary in the narrow
+  list pane) is a three-line item for material3's `ListItem`, and material3's measure policy
+  intentionally top-aligns the leading icon on three-line items
+  (`isSupportingMultiline` → `place(…, y = topPadding)` instead of centering) — that is the
+  Material 3 spec for three-line list items. The icon itself sizes fine (24dp `Icon`), and
+  rows with a one-line supporting text stay centered; only the wrapped rows differ, and the
+  placement happens on the slot by the layout, so it cannot be adjusted from inside
+  `leadingContent`.
+  **Decision:** keep the material3 default (won't fix for now). Revisit only if it reads as
+  misaligned in practice; the alternative would be clamping the supporting line to one line
+  in result rows (loses long summaries).
+
 ## Data source
 
 - **No `Long` by default.** The default `SharedStore`-backed flow omits `Long` to match

@@ -347,9 +347,10 @@ public fun LazyListScope.group(
             // A page card: registers the child-page reference (with the action that
             // replaces navigation, if any); no search entry, as the page itself is
             // searchable in its own right.
-            item.page != null -> SearchIndexer.recordSubPage(item.page, item.onClick, rowKey)
+            item.page != null ->
+                SearchIndexer.recordSubPage(item.page, item.onClick, rowKey, item.icon ?: item.page?.icon)
             // A preference card: searchable entry, keyed.
-            else -> SearchIndexer.record(rowKey, item.title, item.summary)
+            else -> SearchIndexer.record(rowKey, item.title, item.summary, item.icon)
         }
         val isLast = index == last
         item(key = rowKey, contentType = "GroupItem") {

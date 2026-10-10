@@ -89,7 +89,14 @@ public inline fun <T> LazyListScope.itemList(
     noinline item: @Composable (value: T, currentValue: T, onClick: () -> Unit) -> Unit =
         ItemListDefaults.item(type, valueToText),
 ) {
-    SearchIndexer.record(key, title, staticSummary)
+    // The icon depends on the value, which is only known in composition: the result
+    // row re-reads the row's (store-backed) state to render it with the current value.
+    SearchIndexer.record(
+        key,
+        title,
+        staticSummary,
+        icon?.let { rowIcon -> @Composable { rowIcon(rememberState().value) } },
+    )
     item(key = key, contentType = "ItemList") {
         val state = rememberState()
         val value by state
@@ -141,7 +148,7 @@ public fun <T> LazyListScope.itemList(
     item: @Composable (value: T, currentValue: T, onClick: () -> Unit) -> Unit =
         ItemListDefaults.item(type, valueToText),
 ) {
-    SearchIndexer.record(key, title, staticSummary ?: summary)
+    SearchIndexer.record(key, title, staticSummary ?: summary, icon)
     item(key = key, contentType = "ItemList") {
         ItemList(
             value = value,

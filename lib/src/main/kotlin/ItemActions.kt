@@ -39,7 +39,7 @@ public fun LazyListScope.itemActions(
     staticSummary: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    SearchIndexer.record(key, title, staticSummary ?: summary)
+    SearchIndexer.record(key, title, staticSummary ?: summary, icon)
     item(key = key, contentType = "ItemActions") {
         ItemActions(
             title = title,

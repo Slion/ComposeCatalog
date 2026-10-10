@@ -46,9 +46,16 @@ internal object SearchIndexer {
      * Records a searchable entry for the preference row being registered, with the index of
      * the lazy list item it belongs to. No-op when no index walk is in progress, so builders
      * call it unconditionally.
+     *
+     * @param icon The leading icon of the row, shown in a search result for the entry; null
+     *   when the row has none.
      */
-    fun record(key: String, title: String, summary: String? = null): SearchIndexEntry? =
-        collector?.record(key, title, summary)
+    fun record(
+        key: String,
+        title: String,
+        summary: String? = null,
+        icon: @Composable (() -> Unit)? = null,
+    ): SearchIndexEntry? = collector?.record(key, title, summary, icon)
 
     /**
      * Records a page reference for the page row ([item] with a [Page]) being registered
@@ -58,9 +65,16 @@ internal object SearchIndexer {
      *
      * @param key The key of the lazy list item that hosts the row, so a search result can
      *   scroll to and highlight it.
+     * @param icon The leading icon of the row, shown in a search result for the page;
+     *   null when the row has none.
      */
-    fun recordSubPage(page: Page, onClick: (() -> Unit)?, key: String? = null): SubPageRef? {
-        return collector?.recordSubPage(page, onClick, key)
+    fun recordSubPage(
+        page: Page,
+        onClick: (() -> Unit)?,
+        key: String? = null,
+        icon: @Composable (() -> Unit)? = null,
+    ): SubPageRef? {
+        return collector?.recordSubPage(page, onClick, key, icon)
     }
 
     /**
@@ -83,6 +97,12 @@ public data class SubPageRef(
     public val onClick: (() -> Unit)? = null,
     public val index: Int = 0,
     public val key: String? = null,
+    /**
+     * The leading icon of the page's row, drawn next to the page in a search result;
+     * null when the row has no icon (the result row then shows the page's icon, or its
+     * own icon, instead).
+     */
+    public val icon: @Composable (() -> Unit)? = null,
 )
 
 /**
@@ -114,6 +134,11 @@ public data class SearchIndexEntry(
     public val titleLowercase: String = title.lowercase(),
     /** [summary] lowercased once at index-build time; null when [summary] is null. */
     public val summaryLowercase: String? = summary?.lowercase(),
+    /**
+     * The leading icon of the entry's row, drawn next to the entry in a search result;
+     * null when the row has no icon (the result row then shows its own icon instead).
+     */
+    public val icon: @Composable (() -> Unit)? = null,
 )
 
 /**
@@ -165,6 +190,12 @@ internal fun buildSearchEntries(
 ): List<SearchEntry> {
     val q = query.trim().lowercase()
     var rowId = 0
+    // The row's leading icon of every hosted page (its page row's icon, the page's own
+    // as fallback), so a page-level result row looks like its row.
+    val subPageIconById =
+        buildPageStructure(root).values
+            .flatMap { it.subPages }
+            .associateBy({ it.page.id }) { it.icon }
     // (relevance rank, page depth in the tree, row) — see the sort at the end.
     val ranked = mutableListOf<Triple<Int, Int, SearchEntry>>()
     matches.forEach { match ->
@@ -196,6 +227,7 @@ internal fun buildSearchEntries(
                         path = path,
                         trail = trail,
                         entry = null,
+                        icon = subPageIconById[match.page.id],
                     ),
                 )
             )
@@ -259,14 +291,26 @@ internal class SearchIndexRecorder {
         count++
     }
 
-    internal fun recordSubPage(page: Page, onClick: (() -> Unit)?, key: String? = null): SubPageRef {
-        val ref = SubPageRef(page = page, onClick = onClick, index = count, key = key)
+    internal fun recordSubPage(
+        page: Page,
+        onClick: (() -> Unit)?,
+        key: String? = null,
+        icon: @Composable (() -> Unit)? = null,
+    ): SubPageRef {
+        val ref =
+            SubPageRef(page = page, onClick = onClick, index = count, key = key, icon = icon)
         subPages.add(ref)
         return ref
     }
 
-    fun record(key: String, title: String, summary: String? = null): SearchIndexEntry {
-        val entry = SearchIndexEntry(key = key, title = title, summary = summary, index = count)
+    fun record(
+        key: String,
+        title: String,
+        summary: String? = null,
+        icon: @Composable (() -> Unit)? = null,
+    ): SearchIndexEntry {
+        val entry =
+            SearchIndexEntry(key = key, title = title, summary = summary, icon = icon, index = count)
         entries.add(entry)
         return entry
     }

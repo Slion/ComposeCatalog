@@ -78,6 +78,11 @@ internal data class SearchEntry(
     val path: String,
     val trail: List<String>,
     val entry: SearchIndexEntry?,
+    /**
+     * The leading icon of the page's row, for a page-level match (a preference entry's
+     * row icon lives on [entry]); null when the row has no icon.
+     */
+    val icon: @Composable (() -> Unit)? = null,
 )
 
 /**

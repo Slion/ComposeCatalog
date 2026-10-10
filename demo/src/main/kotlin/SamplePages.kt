@@ -16,7 +16,10 @@
 
 package net.slions.compose.toolkit.demo
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
@@ -90,6 +93,7 @@ fun sampleRootPage(
                         title = "Settings",
                         summary = "A second Catalog: its own tree and search, sharing this app's store.",
                     ) {},
+                icon = { Icon(imageVector = Icons.Outlined.Settings, contentDescription = null) },
                 onClick = onOpenSettings,
             )
             item(

@@ -37,7 +37,7 @@ public fun LazyListScope.itemActionIconButton(
     iconButtonEnabled: Boolean = enabled,
     onIconButtonClick: () -> Unit,
 ) {
-    SearchIndexer.record(key, title, staticSummary ?: summary)
+    SearchIndexer.record(key, title, staticSummary ?: summary, icon)
     item(key = key, contentType = "ItemActionIconButton") {
         ItemActionIconButton(
             title = title,

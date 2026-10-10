@@ -291,6 +291,7 @@ internal fun ListPane(
                             entry = entry.entry,
                             page = entry.page,
                             path = entry.path,
+                            icon = entry.icon,
                             onClick = { onSearchEntryClick(entry) },
                         )
                     }
@@ -633,6 +634,7 @@ private fun SearchEntryRow(
     entry: SearchIndexEntry?,
     page: Page?,
     path: String,
+    icon: @Composable (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     ListItem(
@@ -657,7 +659,17 @@ private fun SearchEntryRow(
             }
         },
         leadingContent = {
-            Icon(imageVector = Icons.Filled.Search, contentDescription = null)
+            // The row's own leading icon (the page row's for a page match), so a
+            // result looks like its row; the search icon for rows without one.
+            // Vertical placement is material3's: centered, or top-aligned for a
+            // row whose supporting text wraps to several lines (a three-line
+            // list item).
+            val rowIcon = entry?.icon ?: icon ?: page?.icon
+            if (rowIcon != null) {
+                rowIcon()
+            } else {
+                Icon(imageVector = Icons.Filled.Search, contentDescription = null)
+            }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
