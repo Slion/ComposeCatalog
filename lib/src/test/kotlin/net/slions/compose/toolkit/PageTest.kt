@@ -52,15 +52,56 @@ class PageTest {
     }
 
     @Test
-    fun `findPage returns the first page when ids are duplicated`() {
-        val dup = Page(id = "dup", title = "First", content = {})
-        val dup2 = Page(id = "dup", title = "Second", content = {})
+    fun `findPage returns the first aliased instance in walk order`() {
+        // The same page hosted twice (same id, same title): walk order decides which
+        // instance the lookup returns.
+        val dup = Page(id = "dup", title = "Dup", content = {})
+        val dup2 = Page(id = "dup", title = "Dup", content = {})
         val tree =
             Page(id = "root", title = "R") {
                 item(page = dup)
                 item(page = dup2)
             }
         assertSame(dup, findPage(tree, "dup"))
+    }
+
+    @Test
+    fun `findPagePath returns the shallowest trail of an aliased page`() {
+        // The same page (same id) hosted under 'mid' and directly under the root: the
+        // preferred trail is the shallowest one.
+        val aliasedDeep = Page(id = "aliased", title = "Aliased", content = {})
+        val aliased = Page(id = "aliased", title = "Aliased", content = {})
+        val tree =
+            Page(id = "root", title = "Root") {
+                item(page = Page(id = "mid", title = "Mid") { item(page = aliasedDeep) })
+                item(page = aliased)
+            }
+        assertEquals(listOf("root", "aliased"), findPagePath(tree, "aliased")!!.map { it.id })
+    }
+
+    @Test
+    fun `walkDistinctPages returns each page once, its shallowest instance`() {
+        val aliasedDeep = Page(id = "aliased", title = "Aliased", content = {})
+        val aliased = Page(id = "aliased", title = "Aliased", content = {})
+        val tree =
+            Page(id = "root", title = "Root") {
+                item(page = Page(id = "mid", title = "Mid") { item(page = aliasedDeep) })
+                item(page = aliased)
+            }
+        val pages = tree.walkDistinctPages()
+        assertEquals(listOf("root", "mid", "aliased"), pages.map { it.id })
+        assertSame(aliased, pages.last())
+    }
+
+    @Test
+    fun `an id used by two different pages is rejected`() {
+        val tree =
+            Page(id = "root", title = "Root") {
+                item(page = Page(id = "dup", title = "One", content = {}))
+                item(page = Page(id = "dup", title = "Two", content = {}))
+            }
+        val error = assertFailsWith<IllegalArgumentException> { buildPageStructure(tree) }
+        assertTrue("'dup'" in error.message.orEmpty())
     }
 
     @Test

@@ -102,8 +102,10 @@ fun groupPage(colorScheme: ColorScheme): Page =
         }
 
         section(key = "gp_pages_category", title = "Page rows")
-        // An item with a page is a page row: it registers the child page (so the page joins
-        // the tree) and navigates by default, exactly like item(page = ...).
+        // An item with a page is a page row: it registers the child page (so the page
+        // joins the tree) and navigates by default, exactly like item(page = ...). These
+        // pages are hosted by the root as well — same id, same page: the rows are
+        // aliases, and the page is searched, indexed and navigated once.
         group(key = "gp_pages") {
             item(page = checkboxPage())
             item(page = switchPage())

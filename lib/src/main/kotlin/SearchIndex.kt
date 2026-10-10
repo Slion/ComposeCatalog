@@ -132,11 +132,11 @@ internal fun walkPageContent(page: Page): PageStructure =
 
 /**
  * The structure of every page in the tree rooted at [root] — including every level of
- * page references. Page ids must be unique within the whole tree, as they key both the
- * structure and the navigation.
+ * page references. A page hosted from several places (the same id) appears once, under
+ * its shallowest instance, as its id keys both the structure and the navigation.
  */
 public fun buildPageStructure(root: Page): Map<String, PageStructure> =
-    root.walkPages().associateBy({ it.id }) { it.structure }
+    root.walkDistinctPages().associateBy({ it.id }) { it.structure }
 
 /**
  * Builds the search index of the page tree rooted at [root] (the searchable entries of
@@ -149,10 +149,11 @@ public fun buildSearchIndex(root: Page): Map<String, List<SearchIndexEntry>> =
  * Flattens the search [matches] into the result rows the list pane shows, ordered by
  * relevance: a page whose title is exactly the query first, then pages whose title
  * contains it, then entries whose title contains it, and finally matches that only hit
- * a summary. Within a rank the tree order (the walk order) is kept. A row gets a unique
- * id (several rows can share an entry key, e.g. the rows of the same card), so the
- * results list can key on it. [title] is the screen title, shown as the path of the
- * root page's rows (the root is the screen itself, so it has no trail segment).
+ * a summary. Within a rank the shallower page (closer to the root) comes first, and the
+ * tree order (the walk order) is kept as the last resort. A row gets a unique id
+ * (several rows can share an entry key, e.g. the rows of the same card), so the results
+ * list can key on it. [title] is the screen title, shown as the path of the root
+ * page's rows (the root is the screen itself, so it has no trail segment).
  *
  * A pure function so it can be memoized (e.g. in `remember`) and unit-tested.
  */
@@ -164,44 +165,61 @@ internal fun buildSearchEntries(
 ): List<SearchEntry> {
     val q = query.trim().lowercase()
     var rowId = 0
-    val ranked = mutableListOf<Pair<Int, SearchEntry>>()
+    // (relevance rank, page depth in the tree, row) — see the sort at the end.
+    val ranked = mutableListOf<Triple<Int, Int, SearchEntry>>()
     matches.forEach { match ->
-        // The page's trail in the tree (e.g. "Nested > Advanced"), shown under each of
-        // its result rows; the root's trail is the screen title.
+        // The page's preferred trail (the shallowest one when the page is hosted from
+        // several places), shown under each of its result rows and stored on the row:
+        // selecting it enters the page through this trail.
+        val pagePath = findPagePath(root, match.page.id)
+        // The trail as titles (e.g. "Nested > Advanced"); the root's trail is the
+        // screen title.
         val path =
-            (findPagePath(root, match.page.id)?.drop(1)?.map { it.title } ?: emptyList())
+            (pagePath?.drop(1)?.map { it.title } ?: emptyList())
                 .joinToString(" > ")
                 .ifEmpty { title }
+        // The trail as ids, below the root (empty = the root level). The page's depth
+        // is its size: within a rank, the shallower page is closer to what the user is
+        // looking at, so it comes first.
+        val trail = pagePath?.drop(1)?.map { it.id } ?: emptyList()
+        val depth = trail.size
         if (match.pageMatched) {
             // The page itself matched (by title/summary): show the page row, even when
             // some of the page's entries matched as well.
             ranked.add(
-                pageMatchRank(match.page, q)
-                    to
+                Triple(
+                    pageMatchRank(match.page, q),
+                    depth,
                     SearchEntry(
                         id = rowId++,
                         page = match.page,
                         path = path,
+                        trail = trail,
                         entry = null,
-                    )
+                    ),
+                )
             )
         }
         // One row per matching preference entry of the page.
         match.matches.forEach { entry ->
             ranked.add(
-                entryMatchRank(entry, q)
-                    to
+                Triple(
+                    entryMatchRank(entry, q),
+                    depth,
                     SearchEntry(
                         id = rowId++,
                         page = match.page,
                         path = path,
+                        trail = trail,
                         entry = entry,
-                    )
+                    ),
+                )
             )
         }
     }
-    // Stable sort: relevance first, the tree order kept within a rank.
-    return ranked.sortedBy { it.first }.map { it.second }
+    // Stable sort by rank then depth: relevance first, the shallower page first within
+    // a rank, and the tree order kept as the last resort.
+    return ranked.sortedWith(compareBy({ it.first }, { it.second })).map { it.third }
 }
 
 /**

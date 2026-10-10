@@ -150,6 +150,36 @@ class SearchIndexTest {
     }
 
     @Test
+    fun `a page hosted from two places is indexed and searched once`() {
+        // The same page (same id, same content) is hosted under the root and under
+        // 'mid': one index entry, one search match, one result row.
+        val aliasedDeep =
+            Page(id = "aliased", title = "Switch") {
+                itemSwitch("sw", value = false, onValueChange = {}, title = "A switch")
+            }
+        val aliased =
+            Page(id = "aliased", title = "Switch") {
+                itemSwitch("sw", value = false, onValueChange = {}, title = "A switch")
+            }
+        val tree =
+            Page(id = "root", title = "Root") {
+                item(page = Page(id = "mid", title = "Mid") { item(page = aliasedDeep) })
+                item(page = aliased)
+            }
+        val index = buildSearchIndex(tree)
+        assertEquals(listOf("root", "mid", "aliased"), index.keys.toList())
+        val matches = searchPages(tree, index, "switch")
+        assertEquals(listOf("aliased"), matches.map { it.page.id })
+        val entries =
+            buildSearchEntries(tree, matches, "switch", "Root")
+        // One page row (the page title matched) and one entry row — not two of each.
+        assertEquals(listOf("aliased" to null, "aliased" to "sw"), entries.map { it.page.id to it.entry?.key })
+        // The rows carry the shallowest trail: the page is top-level, so it is just
+        // its own id (the trail is below the root, page included).
+        assertTrue(entries.all { it.trail == listOf("aliased") })
+    }
+
+    @Test
     fun `record outside a walk is a no-op`() {
         assertNull(SearchIndexer.record("k", "t"))
     }

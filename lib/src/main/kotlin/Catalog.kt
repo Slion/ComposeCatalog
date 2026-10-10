@@ -66,14 +66,17 @@ private const val FIELD_FOCUS_SETTLE_MS = 400L
 private enum class ActivePane { List, Detail }
 
 /**
- * A search result row: a page (optionally nested; [path] names its trail, e.g. "Nested >
- * Advanced" — the screen title for the root page's rows) and, for an entry match, the
- * [entry] of the page.
+ * A search result row: a page (optionally nested; [path] names its trail as titles, e.g.
+ * "Nested > Advanced" — the screen title for the root page's rows) and, for an entry
+ * match, the [entry] of the page. [trail] is the same trail as page ids below the root:
+ * selecting the row enters the page through it (a page hosted from several places is
+ * entered where the result found it).
  */
 internal data class SearchEntry(
     val id: Int,
     val page: Page,
     val path: String,
+    val trail: List<String>,
     val entry: SearchIndexEntry?,
 )
 
@@ -234,9 +237,13 @@ public fun Catalog(
     // is the screen itself, so it is never part of the navigation trail.
     fun pathOf(pageId: String): List<String> =
         findPagePath(root, pageId)?.drop(1)?.map { it.id } ?: listOf(pageId)
-    fun selectPageById(pageId: String) {
+    // Selects [pageId] in the detail pane with [trail] as its navigation trail. The
+    // trail is the one of the place the page was selected from (a row knows where it
+    // lives) rather than re-derived from the tree, so a page hosted from several
+    // places is entered where the user tapped it.
+    fun selectPageById(pageId: String, trail: List<String>) {
         userSelectedPage = true
-        pagePath = pathOf(pageId)
+        pagePath = trail
         scope.launch {
             navigator.navigateTo(
                 pane = ListDetailPaneScaffoldRole.Detail,
@@ -386,17 +393,12 @@ public fun Catalog(
         remember(matches, query, title) { buildSearchEntries(root, matches, query, title) }
 
     val currentPage = selectedPageId?.let { id -> findPage(root, id) }
-    // The trail of pages from the root to the current one (root included), for the
-    // breadcrumb and the search supporting text (may be stale for one frame after a
-    // navigation; it is re-derived from the real destination below).
+    // The trail of the page the detail shows, from below the root (the pages of
+    // [pagePath] resolved to instances for their titles). Derived from the stored trail
+    // rather than re-walked, so a page hosted from several places keeps the trail it
+    // was entered from (may be stale for one frame after a navigation).
     val currentPath: List<Page> =
-        remember(root, selectedPageId) {
-            if (selectedPageId != null) {
-                findPagePath(root, selectedPageId) ?: emptyList()
-            } else {
-                emptyList()
-            }
-        }
+        remember(root, pagePath) { pagePath.mapNotNull { findPage(root, it) } }
     // The page whose items fill the list pane: the selected page's parent, or the root
     // (whose items are the list itself) while no page is selected.
     val parentPage: Page =
@@ -406,22 +408,38 @@ public fun Catalog(
             destination?.pane == ListDetailPaneScaffoldRole.Detail &&
             currentPage != null
 
-    // Make the list pane show [owner]'s items, then scroll it to the row at [index] and
-    // highlight the lazy list item [key] (null: the row cannot be highlighted).
-    fun showListRow(owner: Page, key: String?, index: Int) {
+    // Make a pane show [owner]'s items, then scroll it to the row at [index] and
+    // highlight the lazy list item [key] (null: the row cannot be highlighted). [trail]
+    // is [owner]'s trail below the root, where the row was found: it is used when the
+    // owner has to be opened (a page hosted from several places is entered through it).
+    fun showListRow(owner: Page, trail: List<String>, key: String?, index: Int) {
         when {
             // The list pane already shows the owner's items.
             parentPage.id == owner.id -> Unit
-            // Single-pane with the detail open: back to the root list.
-            !isTwoPane && destination?.pane == ListDetailPaneScaffoldRole.Detail ->
+            // Single-pane, the owner is the root, and the detail is open: back to the
+            // root list, where the owner's rows live.
+            !isTwoPane &&
+                owner.id == root.id &&
+                destination?.pane == ListDetailPaneScaffoldRole.Detail ->
                 scope.launch { popToRootList() }
-            // Two-pane, nested: move the selection to the current branch's child of the
-            // owner, so the list shows the owner's items.
+            // Single-pane with a nested owner: the list only ever shows the root's
+            // items, so open the owner in the detail and locate the row there.
+            !isTwoPane -> {
+                selectPageById(owner.id, trail)
+                highlightedKey = key
+                scrollToIndex = index
+                return
+            }
+            // Two-pane, nested: move the selection to a child of the owner (the
+            // current branch's child when the owner is an ancestor of the shown page,
+            // otherwise the owner's first), so the list shows the owner's items.
             else -> {
-                val child =
-                    currentPath.getOrNull(currentPath.indexOf(owner) + 1)
-                        ?: owner.structure.subPages.firstOrNull()?.page
-                child?.let { navigateToPath(pathOf(it.id)) }
+                val ownerIndex = currentPath.indexOfFirst { it.id == owner.id }
+                val childId =
+                    (if (ownerIndex >= 0) currentPath.getOrNull(ownerIndex + 1)?.id else null)
+                        ?: owner.structure.subPages.firstOrNull { it.onClick == null }?.page?.id
+                        ?: owner.structure.subPages.firstOrNull()?.page?.id
+                childId?.let { navigateToPath(trail + listOf(it)) }
             }
         }
         highlightedKey = key
@@ -430,19 +448,21 @@ public fun Catalog(
 
     // An entry of a page the list pane should show: make sure it shows that page's
     // items, then scroll the list pane to the row and highlight it.
-    fun showListEntry(entry: SearchIndexEntry, owner: Page) {
+    fun showListEntry(entry: SearchIndexEntry, owner: Page, trail: List<String>) {
         query = ""
-        showListRow(owner, entry.key, entry.index)
+        showListRow(owner, trail, entry.key, entry.index)
     }
 
     // A page row matched: it is not a viewable page (it carries an action), so show the
     // page that owns the row in the list pane, then scroll to the row and highlight it.
-    fun showSubPageRow(page: Page) {
+    // [trail] is the matched page's trail below the root, so the owner is the row's
+    // real parent rather than a re-walk of the tree.
+    fun showSubPageRow(page: Page, trail: List<String>) {
         query = ""
-        val path = findPagePath(root, page.id) ?: return
-        val owner = path.getOrNull(path.size - 2) ?: return
+        val ownerTrail = trail.dropLast(1)
+        val owner = ownerTrail.lastOrNull()?.let { findPage(root, it) } ?: root
         val ref = owner.structure.subPages.firstOrNull { it.page.id == page.id } ?: return
-        showListRow(owner, ref.key, ref.index)
+        showListRow(owner, ownerTrail, ref.key, ref.index)
     }
 
     // A search result row was tapped.
@@ -458,21 +478,24 @@ public fun Catalog(
         when {
             // An action page: not a viewable page, so whatever matched, navigate to its
             // row (scroll and highlight) instead of running the action.
-            actionPageIds.contains(page.id) -> showSubPageRow(page)
+            actionPageIds.contains(page.id) -> showSubPageRow(page, entry.trail)
             // An entry of the page the list pane shows: scroll the list to the row.
             entry.entry != null && page.id == parentPage.id ->
-                showListEntry(entry.entry, page)
+                showListEntry(entry.entry, page, pagePath.dropLast(1))
             // An entry of the root while nested (two-pane): back to the root level, then
             // scroll the list to the row.
-            entry.entry != null && page.id == root.id -> showListEntry(entry.entry, root)
+            entry.entry != null && page.id == root.id ->
+                showListEntry(entry.entry, root, emptyList())
             // The root page itself matched: its items are the list itself — nothing to
             // open.
             page.id == root.id -> Unit
             // A page-level match: focus the page's row (scroll + highlight) rather than
             // opening the page — search locates, it doesn't navigate.
-            entry.entry == null -> showSubPageRow(page)
+            entry.entry == null -> showSubPageRow(page, entry.trail)
             else -> {
-                selectPageById(page.id)
+                // The entry's page: open it through the result's own trail (a page
+                // hosted from several places is entered where the result found it).
+                selectPageById(page.id, entry.trail)
                 highlightedKey = entry.entry!!.key
                 // The entry's index is relative to the page's own lazy list, sub-page
                 // rows included — no offset to compute.
@@ -492,10 +515,10 @@ public fun Catalog(
             // per-pane bars with their back arrow already convey position).
             if (isTwoPane) {
                 // The root is the screen itself (its title is the screen title), so it
-                // is not a breadcrumb segment.
+                // is not a breadcrumb segment (currentPath is already root-exclusive).
                 BreadcrumbBar(
                     title = title,
-                    currentPath = currentPath.drop(1),
+                    currentPath = currentPath,
                     pagePath = pagePath,
                     showBackButton = showBackButton,
                     onBack = ::backAction,
@@ -522,7 +545,12 @@ public fun Catalog(
                             onBack = ::backAction,
                             parentPage = parentPage,
                             selectedPageId = selectedPageId,
-                            onSelectPage = ::selectPageById,
+                            // The list shows [parentPage]'s items: its trail is the
+                            // shown page's trail minus the shown page (the root level
+                            // while nothing is selected).
+                            onSelectPage = { id ->
+                                selectPageById(id, pagePath.dropLast(1) + listOf(id))
+                            },
                             isSearching = isSearching,
                             searchEntries = searchEntries,
                             onSearchEntryClick = ::onSearchEntrySelected,
@@ -550,7 +578,9 @@ public fun Catalog(
                         DetailPane(
                             page = currentPage,
                             selectedPageId = selectedPageId,
-                            onSelectPage = ::selectPageById,
+                            // The detail shows the current page: its rows extend the
+                            // shown page's trail.
+                            onSelectPage = { id -> selectPageById(id, pagePath + listOf(id)) },
                             onBack = ::backAction,
                             showBack = showBack,
                             highlightedKey = highlightedKey,

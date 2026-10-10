@@ -94,7 +94,9 @@ internal fun BreadcrumbBar(
     onBack: () -> Unit,
     onNavigateToPath: (List<String>) -> Unit,
 ) {
-    val nested = currentPath.size > 1
+    // currentPath is the shown page's trail below the root: nested once it is
+    // non-empty.
+    val nested = currentPath.isNotEmpty()
     Surface(
         modifier =
             Modifier
@@ -284,7 +286,8 @@ internal fun ListPane(
                         SearchEntryRow(
                             // An entry match shows the preference's own title with the
                             // page's trail as its subtitle; a page match shows the
-                            // page's title and summary.
+                            // page's title, and its parent's trail (or summary) as
+                            // subtitle.
                             entry = entry.entry,
                             page = entry.page,
                             path = entry.path,
@@ -620,7 +623,10 @@ internal fun DetailPane(
  * One search result row, styled as an MD3 [ListItem] (as in the material3 search bar
  * samples): a leading search icon, the entry's title, and a supporting line naming where
  * the page lives in the tree. A page-level match (no [entry]) shows the page's own title
- * and summary instead.
+ * in the headline, so the supporting line is the trail of the page's *parent* (the
+ * trail minus the page's own title) — pages that share a title with a page of another
+ * branch (e.g. hosted from two places) stay distinguishable. A top-level page has no
+ * parent; its summary is shown instead.
  */
 @Composable
 private fun SearchEntryRow(
@@ -639,7 +645,12 @@ private fun SearchEntryRow(
                     // their own title — show just it.
                     path
                 } else {
-                    page?.summary
+                    // A page match names the page in the headline, so the supporting
+                    // line drops the trail's last segment (the page's own title):
+                    // "Group > Switch" -> "Group". A top-level page has no parent
+                    // segment left, so its summary is shown instead.
+                    val parentTrail = path.substringBeforeLast(" > ")
+                    if (parentTrail == path) page?.summary else parentTrail
                 }
             if (!supporting.isNullOrEmpty()) {
                 Text(text = supporting)
